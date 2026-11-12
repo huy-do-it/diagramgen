@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — Minh gộp checkpoint Bảo/Minh khi resolve PR #3
-**Giai đoạn hiện tại:** M-01/M-02 đã merge vào develop qua PR #1/#2; B-01/B-02 có source và evidence của Bảo trong PR #3, đang chờ review/merge. Chuẩn bị ghép dependencies cho M-03. Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Cập nhật lần cuối:** 12/11/2026 — đối chiếu và cập nhật bàn giao M-01–M-07 của Minh.
+**Giai đoạn hiện tại:** M-01–M-07 đã triển khai, kiểm thử trong phạm vi Minh và merge vào `develop`; M-07 qua PR #10, merge commit `761f0ed`. Snapshot kiểm tra ghép nhóm: `81badf9` (đã gồm PR #11 Diagram và PR #12 Workspace). Đang chuẩn bị tích hợp I-01–I-06; chưa nghiệm thu toàn bộ hệ thống. Xem TASKS.md §7 và các giới hạn bên dưới.
 
 ---
 
@@ -12,13 +12,15 @@
 
 | Người | Ngày 1 | Ngày 2 | Ngày 3 | Ngày 4 sáng | Xong |
 |---|---|---|---|---|---|
-| Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
-| Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
-| Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
+| Huy | ✅ H-01 · ✅ H-02 | ✅ H-03 · ✅ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 4/7 |
+| Thiện | ✅ T-01 · ✅ T-02 | ✅ T-03 · ✅ T-04 | ✅ T-05 · ✅ T-06 | ✅ T-07 | 7/7 (Hoàn thành 100%) |
+| Minh | ✅ M-01 · ✅ M-02 | ✅ M-03 · ✅ M-04 | ✅ M-05 · ✅ M-06 | ✅ M-07 | 7/7 (đã bàn giao; chờ nghiệm thu tích hợp chung) |
 | Bảo | ✅ B-01 · ✅ B-02 | ✅ B-03 · ✅ B-04 | ✅ B-05 · ✅ B-06 | ✅ B-07 | 7/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
+
+Đợt cập nhật này xác minh phần Minh bằng source, PR đã merge và evidence. Các dòng của đồng đội được giữ nguyên; bảng không thay thế nghiệm thu liên service. Dấu ✅ của Minh xác nhận deliverables từng task đã bàn giao, không xác nhận CI, review độc lập hoặc toàn bộ WF-01–03 đã đạt.
 
 ---
 
@@ -26,7 +28,16 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | Ngày | Task | Người | PR / ghi chú |
 |---|---|---|---|
+| 12/11/2026 | T-07 Giao diện React Diagram & Hoàn thiện | Thiện | UI-07 (DiagramViewPage), UI-08 (ReviewPanel), DiagramListPanel, useRenderStatus hook polling 2s, Dockerfile multi-stage, deploy/compose/diagram.yml, Subagent QA test pass 100% |
+| 12/11/2026 | T-06 Review + Bình luận + Xuất ZIP | Thiện | Review & Comment entities, POST /api/reviews (BR-29), approve/request-changes (BR-30), needsResubmit (BR-31), comments (BR-32), export ZIP, Subagent QA test pass 100% |
+| 12/11/2026 | T-05 gRPC DiagramEngine Client | Thiện | IDiagramEngineClient, DiagramEngineClient, FakeDiagramEngineClient, UML validation (BR-18..25), HTTP 422 BR-UML, validate/suggestions/validate-project APIs, Subagent QA test pass 100% |
+| 12/11/2026 | T-04 Consumers: workspace & render | Thiện | InboxMessages idempotency, WorkspaceEventsConsumer, RenderEventsConsumer (BR-28), Subagent QA test pass 100% |
+| 12/11/2026 | T-03 Render request + Outbox | Thiện | OutboxMessages entity & migration, POST /api/diagrams/{id}/render (BR-14, BR-32, BR-11), OutboxPublisher BackgroundService, Subagent QA test pass 100% |
+| 12/11/2026 | T-02 Phiên bản + concurrency | Thiện | DiagramVersion entity & repo, BR-15, BR-16 (ETag If-Match), BR-17, RestoreVersion API, Subagent QA test pass 100% |
+| 12/11/2026 | T-01 Diagram: DB + CRUD | Thiện | Đã tạo Diagram.sln, 4 projects, EF Core migration, Subagent QA test pass 100% |
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
+| 12/11/2026 | H-01 (Identity Auth, BCrypt, JWT, Refresh Token BR-01..05) & H-02 (Admin Users, Outbox Events, Purge Tokens Job) | Huy | `feature/huy-identity` — 48/48 tests PASS, build 0 warnings |
+| 12/11/2026 | **H-03/H-04** Workspace Service (Project, Members, Invitations, UserDirectory, ExpireInvitationsJob, BR-06..10) | Huy | 30/30 tests PASS (25 BR tests), build 0 warnings/errors, Outbox/Inbox integrated |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
 | 12/11/2026 | **B-01** Khung repo + Contracts (16 sự kiện, proto 4 RPC) | Bảo | `aca973f` |
 | 12/11/2026 | **B-01** BuildingBlocks Auth + Web + Jobs | Bảo | `83667c4` — kiểm bằng API mẫu: ProblemDetails, JWT, chạy job tay |
@@ -40,6 +51,13 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | 12/11/2026 | **B-07** `tools/seed-events.ps1` + 22 envelope mẫu CampusEats (`tools/events/*`, 12/16 loại — bỏ khóa user/xóa project để không phá demo), `tools/reset-demo.ps1` (xác nhận → xóa volume v2 → build → chờ healthy → `-Seed`), test `SampleEventFilesTests` (file mẫu khớp Contracts), `README.md` | Bảo | `23eec57` (B-06). seed chạy được trên PS 7 và PS 5.1; reset-demo chạy thật 5 container healthy, volume v1 không bị đụng; BuildingBlocks 35/35 test. Phần "tạo dữ liệu CampusEats qua Gateway" chuyển sang I-01 (API chưa có) |
 | 12/11/2026 | M-01 final source review + Git delivery | Minh | Commit `590674c`, [PR #1](https://github.com/huy-do-it/diagramgen/pull/1) vào develop, MERGED tại 5b7dc6c. Fresh build0warning/error, unit43/43 và SQL/PlantUML10/10 PASS; chưa nhận Done toàn DoD. |
 | 12/11/2026 | M-02 Notification DB/API review + delivery | Minh | Commit1d414f1, [PR #2](https://github.com/huy-do-it/diagramgen/pull/2) MERGED vào develop tại5ebea98; unit19/19 và44real API/SQL assertions PASS. Resolve PR2: Render43/43 + Notification19/19 PASS; chưa nhận acceptance tích hợp B-01/Identity/Gateway. |
+| 12/11/2026 | M-03 Consumer render + Inbox/Outbox | Minh | [PR #4](https://github.com/huy-do-it/diagramgen/pull/4) MERGED tại `a22b7f0`. Durable Queued handoff, atomic claim, Started/Completed/Failed, correlation; 24 SQL/Redis/PlantUML checks PASS, gồm hai Worker, duplicate/race/rollback/restart. Engine controlled, chưa nhận B-04 semantics. |
+| 12/11/2026 | M-04 Reconcile, cleanup, báo cáo + API admin | Minh | [PR #5](https://github.com/huy-do-it/diagramgen/pull/5) MERGED tại `b0eb16a`. Recovery Running quá 5 phút, retry từ snapshot, cleanup bảo vệ cohort chưa có report; 29 regression checks + 11 process restart/recovery checks PASS. |
+| 12/11/2026 | M-05 Notification consumers + purge | Minh | [PR #6](https://github.com/huy-do-it/diagramgen/pull/6) MERGED tại `ded2942`. Ba stream, 11 loại event, ProjectRecipients/Inbox, recipient đã chốt, purge 6 giờ; 39 unit + 29 SQL/Redis/API checks PASS tại revision nghiệm thu. |
+| 12/11/2026 | M-06 UI-09, UI-11 + NotificationBell | Minh | [PR #8](https://github.com/huy-do-it/diagramgen/pull/8) MERGED tại `fffcff3`. Bell 30 giây/dropdown 10, notifications, jobs/retry/reports và job cards 5 service. Build PASS; 31 controlled-browser + 9 live Render/Notification API browser checks + 2 SQL assertions PASS. Layout chung chờ H-06 theo Minh duyệt. |
+| 12/11/2026 | M-07 Unit tests + Docker/Compose | Minh | Commit `d6ad67a`, [PR #10](https://github.com/huy-do-it/diagramgen/pull/10) MERGED tại `761f0ed`. Đúng 8 file: hai Dockerfile, hai ignore, hai Compose và hai file test. 84 Render + 41 Notification unit PASS, 0 FAIL/SKIP; hai Linux image và 13 nhóm container checks PASS; Production/UseFake=false, SQL/Redis/PlantUML thật, gRPC fixture theo proto. |
+
+Số test ở mỗi mốc có phần tích lũy/trùng phạm vi, không cộng thành một tổng. Regression mới trên `81badf9`: Identity 48, Workspace 30, Diagram 68, Render 84, Notification 41 = **271 unit PASS, 0 FAIL/SKIP**, Release `/warnaserror`; frontend TypeScript/Vite build PASS. Kết quả này không chứng minh contract liên service hoặc acceptance toàn WF.
 
 ### 2.1 Quyết định đã chốt
 
@@ -77,9 +95,27 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Task | Người | Bắt đầu | Ghi chú |
 |---|---|---|---|
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
-| M-01 review/integration | Minh | 12/11/2026 | PR #1 đã merge tại 5b7dc6c. Đối chiếu6docs PASS; sửa UTC Kind SQL readback. Adapter controlled gRPC7/7 và host4/4 PASS; B-01/B-04 team integration NOT RUN. Không có CI workflow trên baseline, không nhận local PASS là CI xanh. |
-| M-02 integration (đã merge PR #2) | Minh | 12/11/2026 | Branch `feature/minh-m02-notification-api` độc lập từ develop `0e86974`; Minh nghiệm thu và giao Git delivery. Source khớp manifest29/29 trước thay checkpoint docs. Release0warning/error,19unit PASS/0skip và44real API/SQL assertions PASS. B-01/Identity/Gateway acceptance còn chờ. |
-| M-03 preparation | Minh | 12/11/2026 | Chưa code. M-01 đã có trên develop; còn cần B-01 Contracts.Events + B-02 Outbox/EventBus trong PR #3 (chờ merge/kiểm tra tích hợp); tools/seed-events.ps1 chưa có. Chưa tạo bản thay thế các gói của Bảo. |
+| Chuẩn bị I-04/I-06 và kiểm chứng phần Minh khi ghép | Minh + cả nhóm | 12/11/2026 | M-01–M-07 đã merge. Còn nối producer Diagram/Engine thật/Gateway, kiểm restart/retry ordering, recipient khi membership thay đổi và UI-11 job contract của các service. Chưa bắt đầu nghiệm thu toàn WF. |
+
+### Minh — trạng thái bàn giao và giới hạn hiện tại
+
+- M-03 giữ durable handoff đã duyệt: Queued + Inbox commit trước ACK; processor commit Running + Started trước pipeline, rồi commit kết quả/artifact + Outbox nguyên tử. ACK chỉ xác nhận intake bền vững.
+- M-04 đã khép recovery Running, tách bảo trì Redis khỏi xử lý SQL, đưa chính sách nghiệp vụ về service và kiểm cleanup–report. Báo cáo theo ngày CreatedAt UTC; hoãn cohort còn active và tìm lại; report đã chốt bất biến. Admin retry xếp Queued, Attempt tăng khi processor claim.
+- M-05: kết quả render gửi `requestedBy` kể cả actor; sự kiện cộng tác loại actor. Purge chỉ xóa IsRead với ReadAt quá 30 ngày. Notification đã nối shared Web/Auth qua [PR #15](https://github.com/huy-do-it/diagramgen/pull/15), merge `0fcc501`; giữ HS256/Guid-sub, validation400, SQL health và seed. 46 unit + 57 SQL/Redis/API checks PASS; chưa nghiệm thu Gateway/full stack.
+- M-06 đã đối chiếu DESIGN trong hai feature. Sidebar/topbar, icon/drawer và tokens chung chờ H-06 theo quyết định Minh; không nhận toàn UI đạt 100%.
+- M-07 build/smoke dùng image thật; gRPC fixture chỉ chứng minh proto/transport/correlation, không chứng minh thuật toán Engine của Bảo. 11 loại event Notification có log Inbox bỏ qua bản replay. Fixture đã dọn, không thay dữ liệu chung.
+- Tại mốc M-07 chưa có CI; PR #14 của Bảo đã bổ sung workflow matrix. Chỉ nhận CI xanh khi có run thành công trên GitHub, không thay bằng local PASS. PR #10 không có review độc lập được ghi nhận khi merge. Toàn stack, Testcontainers WF-01–03 và chỉ tiêu p95 chưa nghiệm thu.
+- Evidence local **ngoài repository**: workspace `assignment-planning/v2-m01-evidence/` đến `v2-m07-evidence/`; báo cáo `v2-m07-evidence/FINAL_HANDOVER.md`. Audit ghép tại `assignment-planning/v2-integration-readiness/READINESS_REPORT.md`; các file này không tự được upload kèm PR.
+
+### M-03 — checkpoint trước bàn giao PR #4 (lịch sử)
+
+Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “chờ review/chưa có M-04” đã được thay thế bởi trạng thái bàn giao ở trên; giữ lại để truy vết evidence.
+
+- Minh đã duyệt durable handoff: handler chỉ thêm Queued; shared dispatcher commit job + Inbox rồi ACK theo N-04. Processor riêng commit Running + Started Outbox trước pipeline; commit Done/artifact/Completed hoặc Failed/Failed Outbox cùng transaction sau pipeline. Đây là điều chỉnh so với pseudocode inline handler ở TASKS M-03; ACK xác nhận intake bền vững, không phải render hoàn tất.
+- Unique diagram/version chặn intake trùng; Status + Attempt concurrency tokens chặn claim đôi và stale writer. CorrelationId được lưu, khôi phục cho gRPC/log/Outbox. Không sửa source/shared contracts của Bảo hoặc module đồng đội.
+- 24 checks dùng SQL Server 2022, Redis Streams 7, HTTP PlantUML thật, hai Worker processes và controlled Engine: pending replay/intake rollback, restart Queued sau ACK, duplicate/race, atomic claim/final writes, Redis outage/outbox recovery, timeout/DLQ, artifact cũ, shutdown, migration nâng M-01 và gRPC metadata. SDK 8.0.428/runtime 8.0.34 riêng; 54 unit PASS/0 skip.
+- Running gián đoạn/lỗi hạ tầng sau claim được giữ bền vững; **recovery thuộc M-04**, chưa tự phục hồi Running. Không nhận exactly-once transport hoặc toàn bộ WF acceptance. Shared seed-events chưa có; harness ngoài repo dùng canonical envelope thay cho bước manual seed, không thêm tool thay Bảo.
+- Evidence local ngoài repo: `../assignment-planning/v2-m03-evidence/`; contract/chạy service tại `src/Services/Render/README.md`. Lần harness đầu lỗi compile và một lượt wait-condition chưa ổn định đã sửa trong harness; kết quả cuối 24/24, không sửa product để né kiểm tra.
 
 ### Minh — checkpoint trước PR #3 (lịch sử, giữ bằng chứng)
 
@@ -104,7 +140,9 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | # | Mô tả | Mức độ | Service | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| — | Chưa ghi nhận bug đang mở trong checkpoint M-01/M-02; source B-01/B-02 đang chờ review PR #3 | | | | Không suy ra toàn hệ thống đã được nghiệm thu. |
+| INT-M01 | Diagram phát RenderRequested.DiagramType dạng chuỗi, shared contract của Render yêu cầu int1..5 | Chặn WF-02 | Diagram → Render | Đã tái hiện; chờ phối hợp Thiện/Bảo/Minh | Snapshot `81badf9`; decoder thật báo JsonException tại Payload.DiagramType. Không thay contract Render để nhận payload sai. |
+| INT-M02 | Cùng diagram/version qua nhiều lần retry chưa có attempt sequence trong event; recipient read model đa stream có độ trễ | Cần kiểm khi ghép | Render / Diagram / Notification | Mở | Không tự đổi shared contract; kiểm kết quả attempt cũ và membership thay đổi đồng thời. |
+| INT-M03 | Chưa đủ đường chạy Engine/Gateway/Compose và API job chung cho UI-11 | Chặn nghiệm thu chung | Toàn hệ thống | Chờ phần publish/tích hợp của nhóm | Root Compose config từng lỗi tại `81badf9`; với phần hạ tầng PR #14 đã PASS config, Engine thật đã có. Gateway và Identity GET job list/response chuẩn vẫn cần ghép. Không suy ra 11 container/WF acceptance từ config PASS. |
 
 **Rủi ro kỹ thuật đã biết trước (từ v1 và thiết kế):**
 
@@ -157,14 +195,30 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 ## 7. Việc tiếp theo
 
-1. Gửi 6 file trong `docs/rebuild/` cho nhóm đọc; họp 30 phút chốt mục 6 và **TASKS.md mục 1 (hợp đồng chung)**.
-2. Ngày 1, 8:00: Bảo làm B-01 (xong trước 11:00); 3 người còn lại bắt đầu H-01, T-01, M-01 ngay.
-3. Cuối mỗi ngày: mỗi người tick ô của mình ở mục 1 và ghi nhật ký.
-4. Cập nhật Google Sheet theo TASKS.md đã chốt.
+1. Minh đã bàn giao M-01–M-07; các thành viên xác nhận/publish phần còn thiếu và đối chiếu **TASKS.md §1** trước ghép.
+2. Xử lý contract Diagram → Render, gRPC/recovery Diagram và API job chung; không dùng unit PASS để suy ra liên service đã chạy đúng.
+3. Thực hiện I-01–I-06 theo TASKS.md §7: CI, Compose/11 container, WF-01–03 rồi job admin/video. Chỉ tick sau khi có evidence tương ứng.
+4. Mỗi người cập nhật phần tiến độ của mình. Không tự sửa trạng thái đồng đội hoặc Google Sheet từ kết quả kiểm tra local.
 
 ---
 
 ## 8. Nhật ký
+
+### 12/11/2026 — Minh
+- Xong: triển khai và bàn giao M-01–M-07; PR #1/#2/#4/#5/#6/#8/#10 đã merge vào develop. M-07 commit `d6ad67a`, merge `761f0ed`.
+- Kiểm chứng cuối M-07: 84 Render + 41 Notification unit PASS/0 skip, frontend build PASS, hai image build PASS và 13 nhóm container checks PASS; giới hạn Engine fixture đã nêu ở trên.
+- Đồng bộ ghép nhóm: develop `81badf9`; năm service 271 unit PASS/0 skip và client build PASS. Payload Diagram → Render không tương thích đã tái hiện; root Compose chưa hợp lệ. Chưa có acceptance toàn hệ thống.
+- Đang cập nhật: PROGRESS từ các PR/evidence đã xác minh; giữ nguyên dòng tiến độ và nhật ký của đồng đội.
+- Tiếp theo: phối hợp I-04/I-06, kiểm contract và nghiệm thu trên stack thật khi dependencies sẵn sàng.
+
+### 12/11/2026 — Huy
+- Xong: H-03 (Project & Member Management, soft-delete, ETag concurrency, BR-06..08) & H-04 (Invitations, UserDirectory sync, ExpireInvitationsJob, BR-09..10).
+- Test: 30/30 tests PASS (25 BR tests covering BR-06, BR-07, BR-08, BR-09, BR-10, BR-16; 4 directory sync idempotency tests; 1 background expiration job test).
+- Build: `dotnet build src/Services/Workspace/Workspace.sln --warnaserror` 0 warnings, 0 errors.
+- Compose: Kích hoạt `deploy/compose/workspace.yml` (port 5002, WorkspaceDb, Redis).
+- Bug mới: không.
+- Bị chặn bởi: không.
+- Tiếp theo: H-05 Frontend Workspace Feature (Project list, member management, invitation UI).
 
 ### 12/11/2026 — Bảo
 - Xong: B-01 (4 commit: khung repo + Contracts · Auth/Web/Jobs · Outbox/EventBus · tools/client/compose). Phần code chính của B-02 (Outbox, EventBus, ScheduledJobBase) cũng đã nằm trong B-01.

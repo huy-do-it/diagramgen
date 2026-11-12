@@ -1,32 +1,22 @@
-# Huy (H-07) — service "identity" · port host 5001 · database IdentityDb
-# Khi làm Dockerfile: bỏ comment khối mẫu dưới, sửa cho đúng service, xóa dòng "services: {}".
-# Lưu ý:
-#  - build.context là ../../src (đường dẫn tính từ thư mục deploy/compose/ của file này).
-#  - Image mcr.microsoft.com/dotnet/aspnet:8.0 KHÔNG có curl → Dockerfile cần:
-#      RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-#  - Biến ${...} lấy từ deploy/.env (copy từ deploy/.env.example). Không ghi secret thật vào file này.
-#  - Không khai báo networks: mọi service dùng chung network mặc định của project.
-#
-# services:
-#   identity:
-#     build:
-#       context: ../../src
-#       dockerfile: Services/Identity/Identity.API/Dockerfile
-#     environment:
-#       ASPNETCORE_ENVIRONMENT: Development
-#       ConnectionStrings__Default: Server=sqlserver,1433;Database=IdentityDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
-#       ConnectionStrings__Redis: ${REDIS_URL}
-#       Jwt__Key: ${JWT_KEY}
-#       Jwt__Issuer: ${JWT_ISSUER}
-#       Jwt__Audience: ${JWT_AUDIENCE}
-#     ports:
-#       - "5001:8080"
-#     depends_on:
-#       sqlserver: { condition: service_healthy }
-#       redis: { condition: service_healthy }
-#     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-#       interval: 10s
-#       timeout: 3s
-#       retries: 12
-services: {}
+services:
+  identity:
+    build:
+      context: ../../src
+      dockerfile: Services/Identity/Identity.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Server=sqlserver,1433;Database=IdentityDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__Redis: ${REDIS_URL}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+    ports:
+      - "5001:8080"
+    depends_on:
+      sqlserver: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12

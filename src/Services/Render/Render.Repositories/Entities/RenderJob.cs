@@ -12,6 +12,7 @@ public sealed class RenderJob
     public string Title { get; set; } = string.Empty;
     public string ModelJson { get; set; } = string.Empty;
     public Guid RequestedBy { get; set; }
+    public Guid CorrelationId { get; set; }
     public RenderJobStatus Status { get; set; } = RenderJobStatus.Queued;
     public int Attempt { get; set; }
     public string? Error { get; set; }

@@ -2,17 +2,14 @@
   <PropertyGroup>
     <RootNamespace>UMLForge.Render.Service</RootNamespace>
     <AssemblyName>UMLForge.Render.Service</AssemblyName>
-    <GrpcContractProject>../../../Contracts/UMLForge.Contracts.Grpc/UMLForge.Contracts.Grpc.csproj</GrpcContractProject>
-  </PropertyGroup>
-  <PropertyGroup Condition="Exists('$(GrpcContractProject)')">
-    <DefineConstants>$(DefineConstants);HAS_GRPC_CONTRACT</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Render.Repositories/Render.Repositories.csproj" />
+    <ProjectReference Include="../../../Contracts/UMLForge.Contracts.Grpc/UMLForge.Contracts.Grpc.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.EventBus/UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Web/UMLForge.BuildingBlocks.Web.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.60.0" />
-  </ItemGroup>
-  <ItemGroup Condition="Exists('$(GrpcContractProject)')">
-    <ProjectReference Include="$(GrpcContractProject)" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
   </ItemGroup>
 </Project>

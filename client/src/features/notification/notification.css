@@ -1,0 +1,42 @@
+.minh-notifications, .notif-bell { --notification-border: var(--color-border, #e0e5ef); --notification-primary: var(--color-primary, #344bd0); font-size: 14px; line-height: 22px; }
+.minh-notifications { max-width: 1280px; margin: 0 auto; }
+.minh-notifications h1 { font-size: 24px; line-height: 32px; margin-bottom: 8px; font-weight: 600; }
+.notif-page-heading, .notif-toolbar, .notif-pagination, .notif-dropdown-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.notif-page-heading { margin-bottom: 24px; align-items: flex-start; }
+.notif-toolbar { margin-bottom: 16px; }
+.notif-toolbar label { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.notif-list { list-style: none; margin: 0; padding: 0; }
+.notif-page-list { border: 1px solid var(--notification-border); border-radius: 8px; overflow: hidden; background: #fff; }
+.notif-list li + li { border-top: 1px solid var(--notification-border); }
+.notif-entry { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; width: 100%; padding: 16px; border: 0; background: #fff; color: var(--color-text, #202735); text-align: left; overflow-wrap: anywhere; min-height: 64px; }
+.notif-entry:hover { background: var(--color-primary-tint, #eef2ff); }
+.notif-unread { background: var(--color-primary-tint, #eef2ff); }
+.notif-unread > span:first-child { font-weight: 600; }
+.notif-entry time, .notif-entry > span:last-child { font-size: 12px; line-height: 18px; color: var(--color-muted, #697386); }
+.notif-dot { color: var(--notification-primary); }
+.notif-pagination { margin-top: 20px; font-size: 14px; flex-wrap: wrap; }
+.notif-pagination > div { display: flex; align-items: center; gap: 8px; }
+.notif-bell { position: relative; }
+.notif-count { background: var(--notification-primary); color: #fff; border-radius: 20px; padding: 2px 7px; font-size: 12px; }
+.notif-dropdown { position: absolute; z-index: 20; right: 0; top: calc(100% + 8px); width: min(380px, calc(100vw - 32px)); max-height: min(70vh, 640px); overflow-y: auto; background: #fff; border: 1px solid var(--notification-border); border-radius: 10px; box-shadow: 0 8px 24px #2027351f; }
+.notif-dropdown-heading { padding: 16px; border-bottom: 1px solid var(--notification-border); }
+.notif-text-button { border: 0; background: transparent; color: var(--notification-primary); padding: 8px; min-height: 32px; }
+.notif-all { display: block; text-align: center; padding: 16px; border-top: 1px solid var(--notification-border); }
+.notif-empty, .notif-skeleton { padding: 32px 20px; text-align: center; color: var(--color-muted, #697386); background: #fff; border: 1px solid var(--notification-border); border-radius: 8px; }
+.notif-skeleton { background: linear-gradient(100deg, #f1f3fa 30%, #fff 50%, #f1f3fa 70%); }
+.notif-error, .notif-success { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; overflow-wrap: anywhere; }
+.notif-error { color: #a12d3b; background: #fff1f1; border: 1px solid #f4cfd5; }
+.notif-error button { min-height: 44px; margin-left: 12px; color: inherit; background: #fff; border: 1px solid currentColor; padding: 8px 12px; border-radius: 6px; }
+.notif-success { color: #1f7a4d; background: #ecf8f1; border: 1px solid #bfe5cf; }
+@media (max-width: 767px) { .notif-page-heading { flex-direction: column; } .notif-toolbar { gap: 8px; } .notif-bell-label { display: none; } }
+
+@media (max-width: 680px) { .notif-dropdown { left: 0; right: auto; max-width: calc(100vw - 40px); } }
+
+.notif-unread time, .notif-unread > span:last-child, .notif-skeleton { color: var(--color-text-secondary, #344055); }
+.notif-page-heading > .button { max-width: 100%; white-space: normal; }
+.notif-toast { position: fixed; right: 24px; bottom: 24px; z-index: 40; max-width: min(420px, calc(100vw - 48px)); margin: 0; box-shadow: 0 8px 24px #2027351f; }
+
+.minh-notifications .muted { line-height: 22px; }
+.minh-notifications .eyebrow { font-size: 12px; line-height: 18px; }
+
+.notif-entry:hover time, .notif-entry:hover > span:last-child { color: var(--color-text-secondary, #344055); }
