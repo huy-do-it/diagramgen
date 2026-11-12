@@ -15,7 +15,7 @@
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
 | Minh | ⬜ M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
-| Bảo | ⬜ B-01 · ⬜ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 0/7 |
+| Bảo | ✅ B-01 · 🟨 B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 1/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
@@ -28,6 +28,10 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 |---|---|---|---|
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
+| 12/11/2026 | **B-01** Khung repo + Contracts (16 sự kiện, proto 4 RPC) | Bảo | `aca973f` |
+| 12/11/2026 | **B-01** BuildingBlocks Auth + Web + Jobs | Bảo | `83667c4` — kiểm bằng API mẫu: ProblemDetails, JWT, chạy job tay |
+| 12/11/2026 | **B-01/B-02** BuildingBlocks Outbox + EventBus (Redis Streams, Inbox, retry, DLQ) | Bảo | `9f65a86` — kiểm 9/9 kịch bản với Redis 7 thật |
+| 12/11/2026 | **B-01** `make-dev-token.ps1`, khung client v2 (proxy Vite, `shared/api.ts`, auth, layout, `routes.tsx` mẫu), compose `include` + 9 file mẫu | Bảo | Commit nhóm 4 — kiểm build client, proxy, đăng nhập/đăng xuất trên trình duyệt, `docker compose config` |
 
 ### 2.1 Quyết định đã chốt
 
@@ -39,6 +43,21 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | D-04 | 12/11/2026 | **Bỏ realtime**: client polling 2 s | Không phải tiêu chí chấm |
 | D-05 | 12/11/2026 | **Bỏ email**, giữ **thông báo trong app** (Notification service) | Không phải tiêu chí chấm; vẫn có service thứ 5 tiêu thụ sự kiện |
 
+### 2.2 Lưu ý kỹ thuật từ B-01 (mọi người đọc trước khi dùng gói chung)
+
+| # | Lưu ý | Chi tiết |
+|---|---|---|
+| N-01 | Ghim SDK .NET 8 | `global.json` ở gốc repo → `dotnet new` tạo `net8.0` + `.sln` (máy có SDK 9/10 cũng vậy) |
+| N-02 | EF Core đúng bản **8.0.33** | BuildingBlocks dùng 8.0.33; ghim bản thấp hơn sẽ lỗi NU1605 |
+| N-03 | Cấu hình Redis | `ConnectionStrings:Redis` (máy: `localhost:6379`; compose: `ConnectionStrings__Redis: ${REDIS_URL}`) |
+| N-04 | Handler sự kiện không gọi `SaveChanges` | EventConsumer lưu 1 lần gồm thay đổi của handler + Inbox |
+| N-05 | Consumer group tạo từ đầu stream (`0-0`), không dùng `$` | Không mất sự kiện phát trước khi service chạy lần đầu (ví dụ `UserRegistered` lúc seed); Inbox chặn trùng |
+| N-06 | EventConsumer tự retry | Cứ 30 s nhận lại message treo > 60 s; giao ≥ 5 lần vẫn lỗi → `<stream>.dlq`. ReconcileJob của Render vẫn dùng `IStreamMaintenance` |
+| N-07 | Dockerfile cài `curl` | Image `aspnet:8.0` không có `curl` → healthcheck `/health` cần `apt-get install curl` |
+| N-08 | Compose: build context `../../src` | Đường dẫn trong `deploy/compose/*.yml` tính từ thư mục `deploy/compose/` |
+| N-09 | Project `webapi` mới: xóa `app.UseHttpsRedirection()` | Container chỉ chạy HTTP; `AddUmlForgeDefaults` + `UseUmlForgeDefaults` đã đủ middleware |
+| N-10 | Client: chỉ sửa `features/<tên>/routes.tsx` | `App.tsx` đã gắn sẵn route của cả 6 feature; gọi API qua `shared/api.ts` (`apiRequest`, `apiFetch` khi cần `ETag`) |
+
 ---
 
 ## 3. Đang làm
@@ -46,6 +65,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Task | Người | Bắt đầu | Ghi chú |
 |---|---|---|---|
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
+| B-02 integration test (Testcontainers Redis + SQL) | Bảo | 12/11/2026 | Code Outbox/EventBus/Jobs đã xong ở B-01; còn test tự động cho CI (cần duyệt thêm package Testcontainers) |
 
 ---
 
@@ -97,6 +117,8 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Q5 | Deploy cloud hay chỉ chạy Docker Compose local? | Cả nhóm | |
 | Q6 | Repo mới hay làm tiếp trong repo hiện tại (nhánh riêng)? | Cả nhóm | |
 | Q7 | Phân công trong TASKS.md có đúng với Google Sheet không? | Leader | |
+| Q8 | Tài liệu lệch nhau: proto (ARCHITECTURE §7 vs TASKS §1.7), consumer group Render (`render-workers` vs `render-svc`), route chạy job (RULES §5.1 `/api/admin/jobs/...` vs TASKS `/api/admin/<svc>/jobs/...`). Code đang theo TASKS §1 — có sửa ARCHITECTURE/RULES cho khớp không? | Cả nhóm | |
+| Q9 | Repo chưa có nhánh `develop` (RULES §8 yêu cầu PR vào `develop`) — ai tạo? | Leader | |
 
 ---
 
@@ -106,6 +128,17 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 2. Ngày 1, 8:00: Bảo làm B-01 (xong trước 11:00); 3 người còn lại bắt đầu H-01, T-01, M-01 ngay.
 3. Cuối mỗi ngày: mỗi người tick ô của mình ở mục 1 và ghi nhật ký.
 4. Cập nhật Google Sheet theo TASKS.md đã chốt.
+
+---
+
+## 8. Nhật ký
+
+### 12/11/2026 — Bảo
+- Xong: B-01 (4 commit: khung repo + Contracts · Auth/Web/Jobs · Outbox/EventBus · tools/client/compose). Phần code chính của B-02 (Outbox, EventBus, ScheduledJobBase) cũng đã nằm trong B-01.
+- Đang làm: B-02 — integration test Testcontainers.
+- Bug mới: không. Lệch tài liệu → mục 6 Q8.
+- Bị chặn bởi: không.
+- Tiếp theo: B-02 test → B-03 DiagramEngine (chép generator/validator v1).
 
 ---
 
