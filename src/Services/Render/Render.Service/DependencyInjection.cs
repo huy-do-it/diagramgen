@@ -31,6 +31,9 @@ public static class DependencyInjection
         services.AddDbContext<RenderDbContext>(o => o.UseSqlServer(connection));
         services.AddScoped<IRenderJobRepository, RenderJobRepository>();
         services.AddScoped<IRenderPipeline, RenderPipeline>();
+        services.AddScoped<RenderOperationsRepository>();
+        services.AddScoped<RenderOperationsService>();
+        services.AddScoped<IValidator<RenderQuery>, RenderQueryValidator>();
         services.AddScoped<IRenderJobRunner, RenderJobRunner>();
         services.AddScoped<IValidator<RenderRequested>, RenderRequestedValidator>();
         services.TryAddSingleton(TimeProvider.System);

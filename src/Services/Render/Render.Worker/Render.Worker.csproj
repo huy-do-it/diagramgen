@@ -4,6 +4,7 @@
     <AssemblyName>UMLForge.Render.Worker</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Jobs/UMLForge.BuildingBlocks.Jobs.csproj" />
     <ProjectReference Include="../Render.Service/Render.Service.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Web/UMLForge.BuildingBlocks.Web.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33" PrivateAssets="all" />
