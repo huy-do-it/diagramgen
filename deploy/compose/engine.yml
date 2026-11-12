@@ -1,3 +1,20 @@
-# Bảo (B-05) — diagram-engine (gRPC, h2c :8080, healthcheck grpc.health.v1) — chỉ trong mạng nội bộ, không mở port ra ngoài
-# Sẽ hoàn thiện ở B-05.
-services: {}
+# Bảo (B-05) — DiagramEngine (gRPC, h2c :8080). Chỉ dùng trong mạng nội bộ (RULES A7):
+# service khác gọi http://diagram-engine:8080; cổng 5006 chỉ mở cho máy local (127.0.0.1) để dev/Postman.
+services:
+  diagram-engine:
+    build:
+      context: ../../src
+      dockerfile: Services/DiagramEngine/DiagramEngine.Grpc/Dockerfile
+    image: umlforge/diagram-engine:dev
+    environment:
+      # Development: bật gRPC reflection cho Postman/grpcurl
+      ASPNETCORE_ENVIRONMENT: Development
+    ports:
+      - "127.0.0.1:5006:8080"
+    healthcheck:
+      # Container chỉ nhận HTTP/2 → healthcheck gọi grpc.health.v1 bằng chính DLL của service
+      test: ["CMD", "dotnet", "DiagramEngine.Grpc.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s

@@ -1,6 +1,9 @@
 # UMLForge v2 — chạy toàn bộ: docker compose -f deploy/docker-compose.yml up --build -d
 # Mỗi người chỉ sửa file compose của mình trong deploy/compose/ (cần Docker Compose >= 2.20).
 # Biến môi trường: copy deploy/.env.example thành deploy/.env.
+# "umlforge-v2" (không phải "umlforge") để container/volume không trùng project v1 cũ trên cùng máy
+name: umlforge-v2
+
 include:
   - compose/infra.yml        # Bảo: sqlserver, redis, plantuml
   - compose/engine.yml       # Bảo: diagram-engine (gRPC)
@@ -11,3 +14,8 @@ include:
   - compose/render.yml       # Minh
   - compose/notification.yml # Minh
   - compose/client.yml       # Bảo: React + nginx
+
+# Mọi service dùng chung 1 network tên "umlforge" (gọi nhau bằng tên service, ví dụ redis:6379)
+networks:
+  default:
+    name: umlforge

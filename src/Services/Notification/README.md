@@ -1,9 +1,9 @@
-# Notification — M-02
+# Notification — DB/API, consumers, purge và shared bootstrap
 
 Theo `docs/TASKS.md` §1, §4/M-02 và BR-33. Solution .NET 8 riêng; API → Service →
 Repositories. Chỉ NotificationDb, không đọc IdentityDb/WorkspaceDb/RenderDb hoặc gọi
-REST sang service khác. Consumer, Inbox, người nhận từ events và purge thuộc M-05;
-UI thuộc M-06; Docker thuộc M-07.
+REST sang service khác. M-05 bổ sung ba consumer chung, Inbox, ProjectRecipients và
+purge thông báo đã đọc quá 30 ngày; UI thuộc M-06, Docker/Compose thuộc M-07.
 
 ## API contract
 
@@ -32,16 +32,19 @@ notification đã đọc. SQL datetime2 được materialize với UTC Kind đ�
 
 ## B-01 integration
 
-Baseline develop `0e86974` chưa có shared Web/Auth/ICurrentUser/PagedResult. Để chạy
-M-02 độc lập theo TASKS, API dùng trực tiếp ASP.NET Core JWT Bearer, ProblemDetails,
-correlation và Swashbuckle trong composition root của chính Notification. Không tạo
-BuildingBlocks/Contracts thay Bảo, không thêm một auth framework hoặc phát token.
-`NotificationPage` là response riêng có đúng JSON shape PagedResult; không tạo
-generic PagedResult/ICurrentUser trùng với gói chung.
+API dùng `AddUmlForgeDefaults("notification")` và `UseUmlForgeDefaults()` của Bảo:
+Serilog, CorrelationContext, JWT, ProblemDetails, Swagger và endpoint chung. Không
+sửa BuildingBlocks hoặc triển khai login/refresh của Identity.
 
-Khi B-01 được publish: thay bootstrap Web/Auth ở API bằng shared defaults và kiểm
-chứng lại 401/403/validation/claim mapping/correlation/Swagger. Reuse shared page DTO
-khi signature thật sẵn sàng. Không nhận native-bootstrap checks là acceptance B-01.
+Composition root chỉ giữ adaptation cần cho contract Notification: harden JWT HS256
+và nonempty Guid sub trên scheme chung; map FluentValidation sang BusinessRuleException
+400; giữ traceId/code/errors và correlation header; seed chỉ Development/Admin.
+`NotificationDatabaseHealthCheck` kiểm SQL qua endpoint `/health` chung: 200 khi
+kết nối được, 503 khi DB không khả dụng; body theo health writer mặc định của shared
+Web (text). Startup vẫn chạy migration cho NotificationDb trong mọi environment.
+
+`NotificationPage` giữ response nghiệp vụ đã bàn giao và JSON shape PagedResult.
+Không đổi DTO public/schema hoặc tạo thêm auth/event framework trong bước bootstrap.
 
 JWT đúng TASKS §1.2: HS256, issuer `umlforge`, audience `umlforge-client`,
 `MapInboundClaims=false`, name `unique_name`, role `role`, clock skew 30s. Signature,
@@ -74,7 +77,7 @@ dotnet build Notification.sln -c Release /warnaserror -p:RuntimeFrameworkVersion
 dotnet test Notification.sln -c Release --no-build
 ```
 
-Verification 12/11/2026: Release0warning/error; 19 unit PASS/0FAIL/0SKIP;
+Verification M-02 (lịch sử, 12/11/2026): Release0warning/error; 19 unit PASS/0FAIL/0SKIP;
 44 assertions PASS trên API process + SQL2022 thật, JWT fixture ký riêng ngoài repo.
 Bao gồm cách ly hai user/Admin, token sai/hết hạn, paging/filter/search/sort,
 ProblemDetails/correlation (kể cả exception), read/read-all lặp/đồng thời, UTC/ReadAt,
@@ -87,5 +90,21 @@ chưa có trong .NET8; đã sửa theo .NET8 và giữ log lỗi riêng. Không 
 Evidence ngoài repo ở workspace `assignment-planning/v2-m02-evidence/`. Test runner
 đặt ngoài repo, tạo DB fixture riêng trong container SQL cách ly. Không phải
 Identity-issued JWT/Gateway/Redis/consumer/browser acceptance. Local implementation
-đã được Minh nghiệm thu và cho phép Git delivery ngày 12/11/2026. Phần tích hợp
-B-01/Identity/Gateway vẫn cần kiểm chứng sau, không được suy ra PASS từ kết quả này.
+đã được Minh nghiệm thu và cho phép Git delivery ngày 12/11/2026. Không suy ra
+acceptance Identity/Gateway từ kết quả của mốc M-02.
+
+## Regression shared bootstrap — 12/11/2026
+
+- Build API Release `/warnaserror`: 0 warning/error; 46 unit PASS, 0 FAIL/SKIP
+  (41 test cũ + 5 case cấu hình JWT mới). Tests tham chiếu API để build composition
+  code và kiểm options của scheme thật, gồm Events chưa khởi tạo và callback trước.
+- 57 SQL/Redis/API checks PASS bằng process API thật: consumer/Inbox/restart/purge
+  từ regression M-05, token sai/hết hạn/HS384/Guid-sub, ownership, validation400,
+  correlation, sanitized SQL500, Swagger/seed và migration khi restart Production.
+- SQL bị tắt có kiểm soát: `/health` trả503, phục hồi200 sau khi SQL chạy lại mà
+  không restart API. Image Linux của Notification build PASS.
+- Body `/health` dùng text writer chung; lỗi500 dùng code chung `INTERNAL_ERROR`.
+  Các route nghiệp vụ, DTO/page shape, BR-33 và code validation không đổi.
+- Evidence local ngoài repo: `assignment-planning/v2-notification-bootstrap-evidence/`.
+  SQL/Redis fixture riêng đã dọn. Chưa nhận CI, Identity/Gateway hoặc full-stack
+  acceptance; bootstrap local cần review/Git delivery riêng.

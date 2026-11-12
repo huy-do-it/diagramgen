@@ -1,0 +1,79 @@
+# CI UMLForge v2: mỗi .sln trong src/ là 1 job riêng (tự phát hiện, ai thêm service mới không cần sửa file này)
+# + build client + kiểm tra cấu hình Docker Compose. Không merge khi CI đỏ (RULES §8).
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Tìm các solution
+    runs-on: ubuntu-latest
+    outputs:
+      solutions: ${{ steps.find.outputs.solutions }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: |
+          solutions=$(find src -name '*.sln' -not -path '*/bin/*' -not -path '*/obj/*' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "Solutions: $solutions"
+          echo "solutions=$solutions" >> "$GITHUB_OUTPUT"
+
+  dotnet:
+    name: dotnet (${{ matrix.solution }})
+    needs: discover
+    if: needs.discover.outputs.solutions != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        solution: ${{ fromJson(needs.discover.outputs.solutions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore "${{ matrix.solution }}"
+      - name: Build (cảnh báo = lỗi)
+        run: dotnet build "${{ matrix.solution }}" --no-restore -c Release -warnaserror
+      - name: Test (Testcontainers dùng Docker có sẵn trên runner)
+        run: dotnet test "${{ matrix.solution }}" --no-build -c Release --logger trx --results-directory TestResults
+      - name: Lưu kết quả test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ strategy.job-index }}
+          path: TestResults
+          if-no-files-found: ignore
+
+  client:
+    name: client (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+
+  compose:
+    name: docker compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp deploy/.env.example deploy/.env
+      - run: docker compose -f deploy/docker-compose.yml config --quiet

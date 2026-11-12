@@ -1,0 +1,19 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000021",
+  "type": "RenderCompleted",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:21:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000004",
+  "producer": "render",
+  "payload": {
+    "jobId": "30000000-0000-0000-0000-000000000001",
+    "diagramId": "f0000000-0000-0000-0000-000000000001",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "version": 1,
+    "title": "CampusEats - Use Cases",
+    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"320\" height=\"80\"><text x=\"10\" y=\"40\">CampusEats - Use Cases (v1)</text></svg>",
+    "plantUml": "@startuml\ntitle CampusEats - Use Cases\nactor Student\n(Place order)\nStudent -- (Place order)\n@enduml",
+    "durationMs": 840,
+    "requestedBy": "c0000000-0000-0000-0000-000000000001"
+  }
+}
