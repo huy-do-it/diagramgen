@@ -13,7 +13,7 @@
 | Người | Ngày 1 | Ngày 2 | Ngày 3 | Ngày 4 sáng | Xong |
 |---|---|---|---|---|---|
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
-| Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
+| Thiện | ✅ T-01 · ✅ T-02 | ✅ T-03 · ✅ T-04 | ✅ T-05 · ✅ T-06 | ✅ T-07 | 7/7 (Hoàn thành 100%) |
 | Minh | ⬜ M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ⬜ B-01 · ⬜ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 0/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
@@ -26,6 +26,13 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | Ngày | Task | Người | PR / ghi chú |
 |---|---|---|---|
+| 12/11/2026 | T-07 Giao diện React Diagram & Hoàn thiện | Thiện | UI-07 (DiagramViewPage), UI-08 (ReviewPanel), DiagramListPanel, useRenderStatus hook polling 2s, Dockerfile multi-stage, deploy/compose/diagram.yml, Subagent QA test pass 100% |
+| 12/11/2026 | T-06 Review + Bình luận + Xuất ZIP | Thiện | Review & Comment entities, POST /api/reviews (BR-29), approve/request-changes (BR-30), needsResubmit (BR-31), comments (BR-32), export ZIP, Subagent QA test pass 100% |
+| 12/11/2026 | T-05 gRPC DiagramEngine Client | Thiện | IDiagramEngineClient, DiagramEngineClient, FakeDiagramEngineClient, UML validation (BR-18..25), HTTP 422 BR-UML, validate/suggestions/validate-project APIs, Subagent QA test pass 100% |
+| 12/11/2026 | T-04 Consumers: workspace & render | Thiện | InboxMessages idempotency, WorkspaceEventsConsumer, RenderEventsConsumer (BR-28), Subagent QA test pass 100% |
+| 12/11/2026 | T-03 Render request + Outbox | Thiện | OutboxMessages entity & migration, POST /api/diagrams/{id}/render (BR-14, BR-32, BR-11), OutboxPublisher BackgroundService, Subagent QA test pass 100% |
+| 12/11/2026 | T-02 Phiên bản + concurrency | Thiện | DiagramVersion entity & repo, BR-15, BR-16 (ETag If-Match), BR-17, RestoreVersion API, Subagent QA test pass 100% |
+| 12/11/2026 | T-01 Diagram: DB + CRUD | Thiện | Đã tạo Diagram.sln, 4 projects, EF Core migration, Subagent QA test pass 100% |
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
 
