@@ -6,6 +6,7 @@
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Jobs/UMLForge.BuildingBlocks.Jobs.csproj" />
     <ProjectReference Include="../Notification.Service/Notification.Service.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.33" />

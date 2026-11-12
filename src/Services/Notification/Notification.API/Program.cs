@@ -12,6 +12,10 @@ using UMLForge.Notification.Service.Models;
 using UMLForge.Notification.Service.Services;
 using UMLForge.Notification.Service.Validators;
 
+using UMLForge.Notification.Service;
+using UMLForge.BuildingBlocks.Jobs;
+using UMLForge.Notification.API.Jobs;
+
 var builder = WebApplication.CreateBuilder(args);
 var connection = builder.Configuration.GetConnectionString("NotificationDb");
 if (string.IsNullOrWhiteSpace(connection))
@@ -22,6 +26,8 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSingleton<IValidator<NotificationQuery>, NotificationQueryValidator>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddNotificationConsumers();
+builder.Services.AddScheduledJob<PurgeReadNotificationsJob>();
 builder.Services.AddNotificationJwt(builder.Configuration);
 builder.Services.AddAuthorization(o => o.AddPolicy("Admin", p => p.RequireAuthenticatedUser().RequireRole("Admin")));
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = context =>
@@ -94,6 +100,7 @@ app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapJobTriggerEndpoint("notification");
 app.MapGet("/health", async (NotificationDbContext db, CancellationToken cancellationToken) =>
     await db.Database.CanConnectAsync(cancellationToken) ? Results.Ok(new { status = "Healthy" }) : Results.StatusCode(503));
 if (app.Environment.IsDevelopment())

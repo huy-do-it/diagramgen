@@ -1,16 +1,20 @@
 using Microsoft.EntityFrameworkCore;
+using UMLForge.BuildingBlocks.Outbox;
 using NotificationEntity = UMLForge.Notification.Repositories.Entities.Notification;
 using UMLForge.Notification.Repositories.Entities;
 
 namespace UMLForge.Notification.Repositories;
 
-public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext> options) : DbContext(options)
+public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext> options) : DbContext(options), IOutboxDbContext
 {
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
     public DbSet<ProjectRecipient> ProjectRecipients => Set<ProjectRecipient>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.ApplyOutboxInbox();
         var notification = modelBuilder.Entity<NotificationEntity>();
         notification.HasKey(x => x.Id);
         notification.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
