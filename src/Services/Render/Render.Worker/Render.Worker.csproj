@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>UMLForge.Render.Worker</RootNamespace>
+    <AssemblyName>UMLForge.Render.Worker</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Render.Service/Render.Service.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

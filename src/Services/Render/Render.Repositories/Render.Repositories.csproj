@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>UMLForge.Render.Repositories</RootNamespace>
+    <AssemblyName>UMLForge.Render.Repositories</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.33" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

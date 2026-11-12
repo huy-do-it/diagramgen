@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — Bảo
-**Giai đoạn hiện tại:** Ngày 1 — B-01 xong phần code (Contracts + BuildingBlocks + tools + khung client + compose), chờ PR/review. Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Cập nhật lần cuối:** 12/11/2026 — Minh gộp checkpoint Bảo/Minh khi resolve PR #3
+**Giai đoạn hiện tại:** M-01/M-02 đã merge vào develop qua PR #1/#2; B-01/B-02 có source và evidence của Bảo trong PR #3, đang chờ review/merge. Chuẩn bị ghép dependencies cho M-03. Kế hoạch 4 ngày, xem TASKS.md §0.2
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
-| Minh | ⬜ M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
+| Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ✅ B-01 · ✅ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 2/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
@@ -33,6 +33,8 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | 12/11/2026 | **B-01/B-02** BuildingBlocks Outbox + EventBus (Redis Streams, Inbox, retry, DLQ) | Bảo | `9f65a86` — kiểm 9/9 kịch bản với Redis 7 thật |
 | 12/11/2026 | **B-01** `make-dev-token.ps1`, khung client v2 (proxy Vite, `shared/api.ts`, auth, layout, `routes.tsx` mẫu), compose `include` + 9 file mẫu | Bảo | `8dcf665` — kiểm build client, proxy, đăng nhập/đăng xuất trên trình duyệt, `docker compose config` |
 | 12/11/2026 | **B-02** Integration test Testcontainers (Redis 7 + SQL Server 2022): 7 test EventBus/Outbox + 4 test ScheduledJob | Bảo | 11/11 xanh, chạy 3 lần ổn định; cần Docker khi chạy `dotnet test` |
+| 12/11/2026 | M-01 final source review + Git delivery | Minh | Commit `590674c`, [PR #1](https://github.com/huy-do-it/diagramgen/pull/1) vào develop, MERGED tại 5b7dc6c. Fresh build0warning/error, unit43/43 và SQL/PlantUML10/10 PASS; chưa nhận Done toàn DoD. |
+| 12/11/2026 | M-02 Notification DB/API review + delivery | Minh | Commit1d414f1, [PR #2](https://github.com/huy-do-it/diagramgen/pull/2) MERGED vào develop tại5ebea98; unit19/19 và44real API/SQL assertions PASS. Resolve PR2: Render43/43 + Notification19/19 PASS; chưa nhận acceptance tích hợp B-01/Identity/Gateway. |
 
 ### 2.1 Quyết định đã chốt
 
@@ -66,6 +68,26 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Task | Người | Bắt đầu | Ghi chú |
 |---|---|---|---|
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
+| M-01 review/integration | Minh | 12/11/2026 | PR #1 đã merge tại 5b7dc6c. Đối chiếu6docs PASS; sửa UTC Kind SQL readback. Adapter controlled gRPC7/7 và host4/4 PASS; B-01/B-04 team integration NOT RUN. Không có CI workflow trên baseline, không nhận local PASS là CI xanh. |
+| M-02 integration (đã merge PR #2) | Minh | 12/11/2026 | Branch `feature/minh-m02-notification-api` độc lập từ develop `0e86974`; Minh nghiệm thu và giao Git delivery. Source khớp manifest29/29 trước thay checkpoint docs. Release0warning/error,19unit PASS/0skip và44real API/SQL assertions PASS. B-01/Identity/Gateway acceptance còn chờ. |
+| M-03 preparation | Minh | 12/11/2026 | Chưa code. M-01 đã có trên develop; còn cần B-01 Contracts.Events + B-02 Outbox/EventBus trong PR #3 (chờ merge/kiểm tra tích hợp); tools/seed-events.ps1 chưa có. Chưa tạo bản thay thế các gói của Bảo. |
+
+### Minh — checkpoint trước PR #3 (lịch sử, giữ bằng chứng)
+
+- Minh cho phép tạo develop từ main `0e86974`, mở PR M-01 vào develop theo RULES; không merge/main changes. M-02 ban đầu độc lập từ develop0e86974; đã merge develop5b7dc6c để đồng bộ M-01 và xử lý conflict PROGRESS, không đổi source service. M-01 có35file mới Render + checkpoint PROGRESS; M-02 chỉ Notification + checkpoint PROGRESS.
+- M-02 áp dụng BR-33 ở service và owner filter trong SQL; read/read-all conditional update không làm mới ReadAt khi gọi lặp/đồng thời. Seed chỉ Development + Admin, tạo5thông báo cho chính Admin. Timestamps UTC; ProblemDetails có traceId/code/errors; CorrelationId giữ cả khi exception.
+- B-01 chưa publish Web/Auth. M-02 bootstrap JWT Bearer/ProblemDetails/Swagger trực tiếp trong API theo contract TASKS, không tạo shared library thay Bảo hoặc phát token. JSON page đúng shape PagedResult. Khi B-01 có cần thay wiring sang shared defaults và kiểm tra lại; chưa nhận acceptance B-01/Identity/Gateway.
+- Runtime test .NET8.0.32 riêng; SQL2022 container fixture không mount dữ liệu v1. JWT fixture và runners ngoài source, không secret trong appsettings. Evidence workspace `assignment-planning/v2-m01-evidence/` và `v2-m02-evidence/`; contract/chạy M-02 tại `src/Services/Notification/README.md`.
+- M-03/M-04 còn cần thống nhất Inbox/ACK transaction, handler<5s vs pipeline30s, pending replay, interrupted existing job, ownership khi hai Worker và retry/event ordering. M-05 còn cần thống nhất actor/requestedBy và recipient ordering. Chưa tự đổi shared contract hoặc bắt đầu các task này.
+
+### M-01 — checkpoint trước PR #1 (lịch sử, giữ bằng chứng)
+
+- Chỉ source trong `src/Services/Render/`; pipeline trả outcome, M-03 sẽ commit job/artifact/Outbox cùng transaction. Không có Streams/consumer/recovery/admin API hoặc Notification implementation.
+- B-01 hiện chưa có shared project/BuildingBlocks; không tạo Contracts thay Bảo. Adapter compile khi project contract chuẩn tồn tại; thiếu contract thì real mode từ chối startup, Development phải chủ động bật fake.
+- SQL/PlantUML thật trong fixture riêng; Engine fake. Adapter được build/chạy qua HTTP/2 với proto/server fixture theo TASKS ngoài repo; không nhận là kiểm thử Engine của nhóm. Host smoke 4/4 PASS (SQL health 200/503, Production fake rejection, missing-contract rejection). Team gRPC/Streams/Gateway/browser NOT RUN.
+- Lượt test đầu bị aborted vì Core runtime thiếu patch tương ứng ASP.NET; final tests dùng runtime riêng .NET 8.0.32. Không sửa runtime hệ thống. Chi tiết tại `src/Services/Render/README.md`; evidence ngoài repo ở workspace `assignment-planning/v2-m01-evidence/`.
+- M-03/M-04 cần chốt lại transaction Inbox/ACK, pending replay, job đã tồn tại nhưng gián đoạn, quyền ghi khi hai Worker/retry và event ordering với Bảo/Thiện. Chưa tự đổi contract chung.
+- Git workflow: Minh cho phép tạo `develop` từ main `0e86974` vì remote ban đầu chỉ có main; PR M-01 nhắm develop theo RULES. Không đổi main, không thêm CI thay Bảo.
 
 ---
 
@@ -73,7 +95,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | # | Mô tả | Mức độ | Service | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| — | *(chưa có — v2 chưa có code)* | | | | |
+| — | Chưa ghi nhận bug đang mở trong checkpoint M-01/M-02; source B-01/B-02 đang chờ review PR #3 | | | | Không suy ra toàn hệ thống đã được nghiệm thu. |
 
 **Rủi ro kỹ thuật đã biết trước (từ v1 và thiết kế):**
 
@@ -118,7 +140,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Q6 | Repo mới hay làm tiếp trong repo hiện tại (nhánh riêng)? | Cả nhóm | |
 | Q7 | Phân công trong TASKS.md có đúng với Google Sheet không? | Leader | |
 | Q8 | Tài liệu lệch nhau: proto (ARCHITECTURE §7 vs TASKS §1.7), consumer group Render (`render-workers` vs `render-svc`), route chạy job (RULES §5.1 `/api/admin/jobs/...` vs TASKS `/api/admin/<svc>/jobs/...`). Code đang theo TASKS §1 — có sửa ARCHITECTURE/RULES cho khớp không? | Cả nhóm | |
-| Q9 | Repo chưa có nhánh `develop` (RULES §8 yêu cầu PR vào `develop`) — ai tạo? | Leader | |
+| Q9 | Repo chưa có nhánh `develop` (RULES §8 yêu cầu PR vào `develop`) — ai tạo? | Leader | Đã giải quyết: Minh được cho phép tạo develop từ main0e86974; PR #1/#2 đã merge vào develop. |
 
 ---
 
