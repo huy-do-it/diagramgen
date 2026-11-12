@@ -1,0 +1,15 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000019",
+  "type": "CommentAdded",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:19:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000003",
+  "producer": "diagram",
+  "payload": {
+    "commentId": "20000000-0000-0000-0000-000000000001",
+    "diagramId": "f0000000-0000-0000-0000-000000000001",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "diagramTitle": "CampusEats - Use Cases",
+    "actorUserId": "b0000000-0000-0000-0000-000000000001"
+  }
+}

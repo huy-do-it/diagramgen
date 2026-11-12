@@ -15,7 +15,7 @@
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
 | Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
-| Bảo | ✅ B-01 · ✅ B-02 | ✅ B-03 · ✅ B-04 | ✅ B-05 · ✅ B-06 | ⬜ B-07 | 6/7 |
+| Bảo | ✅ B-01 · ✅ B-02 | ✅ B-03 · ✅ B-04 | ✅ B-05 · ✅ B-06 | ✅ B-07 | 7/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
@@ -37,6 +37,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | 12/11/2026 | **B-04** DiagramEngine: 4 RPC (`GeneratePlantUml` validate trước → `InvalidArgument`; `ValidateProject` server streaming), interceptor log + `x-correlation-id` (trả lại trong trailer), gRPC health, reflection (Development) | Bảo | `1ab1ce4` — 65/65 test (12 test gRPC end-to-end); gọi thật qua h2c :5006 đúng cả 4 RPC + health |
 | 12/11/2026 | **B-05** Compose: `infra.yml` (sqlserver, redis AOF, plantuml), `engine.yml` (Dockerfile + healthcheck gRPC), `client.yml` (nginx, `/api` → gateway); project `umlforge-v2`, network `umlforge`; CI GitHub Actions (matrix tự dò mọi `.sln` + client + compose config) | Bảo | `0367b08` — `docker compose up` thật: 5 container healthy, kiểm SQL/Redis/PlantUML SVG/gRPC/client; CI chưa chạy trên GitHub (chỉ kiểm cú pháp + lệnh tương đương ở máy) |
 | 12/11/2026 | **B-06** Editor UI-06 (`features/editor`: chuyển `DiagramEditorPage`, example panel, template CampusEats, `diagramJson` từ v1; API v2: Guid, `If-Match`/ETag, 409 BR-13/14/16, 422 lỗi UML, cảnh báo, gợi ý quan hệ) + hook `shared/useRenderStatus.ts` (polling 2 s khi Pending/Rendering) | Bảo | Chạy trên trình duyệt với API giả theo hợp đồng TASKS: tạo/lưu/render tự cập nhật, 409 + Tải lại, 422, render lỗi giữ SVG cũ, SVG có `<script>` không chạy. **Chưa test với Diagram API thật** (xem Q10) |
+| 12/11/2026 | **B-07** `tools/seed-events.ps1` + 22 envelope mẫu CampusEats (`tools/events/*`, 12/16 loại — bỏ khóa user/xóa project để không phá demo), `tools/reset-demo.ps1` (xác nhận → xóa volume v2 → build → chờ healthy → `-Seed`), test `SampleEventFilesTests` (file mẫu khớp Contracts), `README.md` | Bảo | `23eec57` (B-06). seed chạy được trên PS 7 và PS 5.1; reset-demo chạy thật 5 container healthy, volume v1 không bị đụng; BuildingBlocks 35/35 test. Phần "tạo dữ liệu CampusEats qua Gateway" chuyển sang I-01 (API chưa có) |
 | 12/11/2026 | M-01 final source review + Git delivery | Minh | Commit `590674c`, [PR #1](https://github.com/huy-do-it/diagramgen/pull/1) vào develop, MERGED tại 5b7dc6c. Fresh build0warning/error, unit43/43 và SQL/PlantUML10/10 PASS; chưa nhận Done toàn DoD. |
 | 12/11/2026 | M-02 Notification DB/API review + delivery | Minh | Commit1d414f1, [PR #2](https://github.com/huy-do-it/diagramgen/pull/2) MERGED vào develop tại5ebea98; unit19/19 và44real API/SQL assertions PASS. Resolve PR2: Render43/43 + Notification19/19 PASS; chưa nhận acceptance tích hợp B-01/Identity/Gateway. |
 
@@ -150,6 +151,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Q8 | Tài liệu lệch nhau: proto (ARCHITECTURE §7 vs TASKS §1.7), consumer group Render (`render-workers` vs `render-svc`), route chạy job (RULES §5.1 `/api/admin/jobs/...` vs TASKS `/api/admin/<svc>/jobs/...`). Code đang theo TASKS §1 — có sửa ARCHITECTURE/RULES cho khớp không? | Cả nhóm | |
 | Q9 | Repo chưa có nhánh `develop` (RULES §8 yêu cầu PR vào `develop`) — ai tạo? | Leader | Đã giải quyết: Minh được cho phép tạo develop từ main0e86974; PR #1/#2 đã merge vào develop. |
 | Q10 | Editor (B-06) đang theo hợp đồng suy ra từ TASKS T-01…T-05, cần Thiện xác nhận: (1) `GET /api/diagrams/{id}` trả `id, projectId, type` (chuỗi `"UseCase"`)`, title, modelJson, status` (chuỗi)`, currentVersion, svgXml, plantUml, renderedAt, lastError, createdAt, updatedAt` + header `ETag`; (2) 409 có `code` `BR-13`/`BR-14`/`BR-16`; (3) POST/PUT trả thêm `warnings[]`, `needsResubmit`; (4) lỗi UML khi lưu → 422 `errors.modelJson[]`; (5) `POST /api/diagrams/{id}/validate` body `{ modelJson }`; (6) route xem sơ đồ UI-07 là `/diagrams/{id}` | Thiện + Bảo | |
+| Q11 | PRD gộp "BR-18…BR-25 = luật UML" nhưng không ghi BR nào ứng với luật nào; RULES §8 yêu cầu `[Trait("BR", …)]` cho mỗi test. Đề xuất theo thứ tự trong PRD §7: BR-18 include/extend · BR-19 generalization · BR-20 vòng lặp · BR-21 use case/actor mồ côi · BR-22 alt/opt/loop · BR-23 business context · BR-24 activity · BR-25 state — nhóm chốt thì Bảo gắn Trait vào 65 test DiagramEngine | Cả nhóm | |
 
 ---
 
@@ -172,7 +174,8 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 - Xong thêm: B-05 (compose hạ tầng + engine + client chạy thật 5 container healthy; CI matrix).
 - Xong thêm: B-06 (editor UI-06 + `useRenderStatus`, test bằng API giả).
 - Bị chặn một phần: chạy editor với Diagram API thật chờ Thiện (Q10).
-- Tiếp theo: B-07 `seed-events.ps1` + `tools/events/*.json`, `reset-demo.ps1`, README.
+- Xong thêm: B-07 (seed-events, 22 sự kiện mẫu + test, reset-demo, README) → Bảo xong 7/7.
+- Tiếp theo: chờ Q10 (Thiện) và Q11 (cả nhóm); ngày 4 chiều dẫn I-01/I-02 — thêm bước tạo dữ liệu CampusEats qua Gateway vào `reset-demo.ps1` khi API Identity/Workspace/Diagram đã có.
 
 ---
 
