@@ -3,7 +3,12 @@ using UMLForge.BuildingBlocks.Web;
 using UMLForge.DiagramEngine.Grpc.Generators;
 using UMLForge.DiagramEngine.Grpc.Interceptors;
 using UMLForge.DiagramEngine.Grpc.Services;
+using UMLForge.DiagramEngine.Grpc;
 using UMLForge.DiagramEngine.Grpc.Validators;
+
+// Chế độ healthcheck cho Docker: gọi gRPC Health rồi thoát, không khởi động server
+if (args.Contains(GrpcHealthProbe.Argument))
+    return await GrpcHealthProbe.RunAsync(Environment.GetEnvironmentVariable("HEALTHCHECK_URL") ?? "http://localhost:8080");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +35,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/", () => "UMLForge DiagramEngine (gRPC). Gọi bằng gRPC client, không qua trình duyệt.");
 
-app.Run();
+await app.RunAsync();
+return 0;
 
 /// <summary>Cho WebApplicationFactory trong DiagramEngine.Tests.</summary>
 public partial class Program

@@ -12,6 +12,8 @@ namespace UMLForge.DiagramEngine.Grpc.Interceptors;
 /// </summary>
 public sealed class LoggingInterceptor : Interceptor
 {
+    private const string HealthMethodPrefix = "/grpc.health.";
+
     private readonly ILogger<LoggingInterceptor> _logger;
 
     public LoggingInterceptor(ILogger<LoggingInterceptor> logger)
@@ -45,7 +47,9 @@ public sealed class LoggingInterceptor : Interceptor
         try
         {
             var result = await call();
-            _logger.LogInformation("gRPC {Method} OK in {ElapsedMs} ms", context.Method, stopwatch.ElapsedMilliseconds);
+            // Healthcheck Docker gọi 10 s/lần → Debug để không lấn log nghiệp vụ
+            var level = context.Method.StartsWith(HealthMethodPrefix, StringComparison.Ordinal) ? LogLevel.Debug : LogLevel.Information;
+            _logger.Log(level, "gRPC {Method} OK in {ElapsedMs} ms", context.Method, stopwatch.ElapsedMilliseconds);
             return result;
         }
         catch (RpcException ex)
