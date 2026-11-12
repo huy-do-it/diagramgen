@@ -12,7 +12,7 @@
 
 | Người | Ngày 1 | Ngày 2 | Ngày 3 | Ngày 4 sáng | Xong |
 |---|---|---|---|---|---|
-| Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
+| Huy | ✅ H-01 · ✅ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 2/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
 | Minh | 🟨 M-01 · 🟨 M-02 | 🟨 M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ✅ B-01 · ✅ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 2/7 |
@@ -27,6 +27,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Ngày | Task | Người | PR / ghi chú |
 |---|---|---|---|
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
+| 12/11/2026 | H-01 (Identity Auth, BCrypt, JWT, Refresh Token BR-01..05) & H-02 (Admin Users, Outbox Events, Purge Tokens Job) | Huy | `feature/huy-identity` — 48/48 tests PASS, build 0 warnings |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
 | 12/11/2026 | **B-01** Khung repo + Contracts (16 sự kiện, proto 4 RPC) | Bảo | `aca973f` |
 | 12/11/2026 | **B-01** BuildingBlocks Auth + Web + Jobs | Bảo | `83667c4` — kiểm bằng API mẫu: ProblemDetails, JWT, chạy job tay |
