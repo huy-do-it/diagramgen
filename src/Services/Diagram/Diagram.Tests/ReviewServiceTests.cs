@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Outbox;
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Repositories.Context;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Interfaces;
 using UMLForge.Diagram.Repositories.Repositories;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
 using UMLForge.Diagram.Service.Services;
 using Xunit;
@@ -21,7 +23,7 @@ public class ReviewServiceTests
     private readonly IDiagramRepository _diagramRepository;
     private readonly IMemberAccessRepository _memberAccessRepository;
     private readonly Mock<ICurrentUser> _currentUserMock;
-    private readonly Mock<IOutboxRepository> _outboxMock;
+    private readonly Mock<IOutbox> _outboxMock;
     private readonly ReviewService _service;
 
     private readonly Guid _testProjectId = Guid.NewGuid();
@@ -40,7 +42,7 @@ public class ReviewServiceTests
         _diagramRepository = new DiagramRepository(_dbContext);
         _memberAccessRepository = new MemberAccessRepository(_dbContext);
         _currentUserMock = new Mock<ICurrentUser>();
-        _outboxMock = new Mock<IOutboxRepository>();
+        _outboxMock = new Mock<IOutbox>();
 
         _currentUserMock.Setup(u => u.UserId).Returns(_leaderUserId);
         _currentUserMock.Setup(u => u.Role).Returns("Student");

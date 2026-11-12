@@ -4,7 +4,8 @@ import { Route } from 'react-router';
 import { DiagramViewPage } from './DiagramViewPage';
 import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
-import { diagramApi, DEV_TOKENS } from './diagramApi';
+import { diagramApi, DEV_TOKENS, ensureDevSession } from './diagramApi';
+import { saveSession } from '../../auth/session';
 import { DiagramType } from './types';
 
 const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000001';
@@ -30,13 +31,15 @@ export const diagramRoutes: ReactElement[] = [
 function DiagramStudioLayout({ children }: { children: React.ReactNode }) {
   const [currentRole, setCurrentRole] = useState<'Leader' | 'Lecturer' | 'Member'>(() => {
     const saved = localStorage.getItem('currentRole');
-    return (saved as 'Leader' | 'Lecturer' | 'Member') || 'Leader';
+    const role = (saved as 'Leader' | 'Lecturer' | 'Member') || 'Leader';
+    ensureDevSession(role);
+    return role;
   });
 
   const handleRoleChange = (role: 'Leader' | 'Lecturer' | 'Member') => {
     setCurrentRole(role);
     localStorage.setItem('currentRole', role);
-    localStorage.setItem('token', DEV_TOKENS[role]);
+    saveSession(DEV_TOKENS[role], 'dev-refresh-token', 86400 * 30);
     window.location.reload();
   };
 

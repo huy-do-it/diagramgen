@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using UMLForge.BuildingBlocks.Outbox;
 using UMLForge.Diagram.Repositories.Entities;
-using UMLForge.Diagram.Repositories.Interfaces;
 
 namespace UMLForge.Diagram.Repositories.Context;
 
@@ -21,6 +21,9 @@ public class DiagramDbContext : DbContext, IOutboxDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Áp dụng bảng OutboxMessages + InboxMessages chuẩn của BuildingBlocks.Outbox
+        modelBuilder.ApplyOutboxInbox();
 
         modelBuilder.Entity<Entities.Diagram>(b =>
         {
@@ -60,24 +63,6 @@ public class DiagramDbContext : DbContext, IOutboxDbContext
             b.HasKey(m => new { m.ProjectId, m.UserId });
             b.Property(m => m.Role).HasMaxLength(50).IsRequired();
             b.HasIndex(m => m.UserId);
-        });
-
-        modelBuilder.Entity<OutboxMessage>(b =>
-        {
-            b.ToTable("OutboxMessages");
-            b.HasKey(o => o.Id);
-            b.Property(o => o.Stream).HasMaxLength(100).IsRequired();
-            b.Property(o => o.Type).HasMaxLength(100).IsRequired();
-            b.Property(o => o.Envelope).IsRequired();
-            b.HasIndex(o => o.PublishedAt);
-            b.HasIndex(o => new { o.PublishedAt, o.CreatedAt });
-        });
-
-        modelBuilder.Entity<InboxMessage>(b =>
-        {
-            b.ToTable("InboxMessages");
-            b.HasKey(i => new { i.EventId, i.Consumer });
-            b.Property(i => i.Consumer).HasMaxLength(100).IsRequired();
         });
 
         modelBuilder.Entity<Review>(b =>

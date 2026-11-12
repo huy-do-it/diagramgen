@@ -27,6 +27,12 @@
     <ProjectReference Include="..\Diagram.Service\Diagram.Service.csproj" />
     <ProjectReference Include="..\Diagram.Repositories\Diagram.Repositories.csproj" />
     <ProjectReference Include="..\Diagram.API\Diagram.API.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Auth\UMLForge.BuildingBlocks.Auth.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Web\UMLForge.BuildingBlocks.Web.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Outbox\UMLForge.BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.EventBus\UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Events\UMLForge.Contracts.Events.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Grpc\UMLForge.Contracts.Grpc.csproj" />
   </ItemGroup>
 
 </Project>

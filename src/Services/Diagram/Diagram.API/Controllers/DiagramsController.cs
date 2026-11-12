@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Service.DTOs;
 using UMLForge.Diagram.Service.Interfaces;
 using UMLForge.Diagram.Service.Models.Validation;

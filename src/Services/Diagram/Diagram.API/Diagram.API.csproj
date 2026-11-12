@@ -7,18 +7,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.60.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="StackExchange.Redis" Version="3.4.31" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Diagram.Service\Diagram.Service.csproj" />
     <ProjectReference Include="..\Diagram.Repositories\Diagram.Repositories.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Web\UMLForge.BuildingBlocks.Web.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Outbox\UMLForge.BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.EventBus\UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Jobs\UMLForge.BuildingBlocks.Jobs.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Events\UMLForge.Contracts.Events.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Grpc\UMLForge.Contracts.Grpc.csproj" />
   </ItemGroup>
 
 </Project>

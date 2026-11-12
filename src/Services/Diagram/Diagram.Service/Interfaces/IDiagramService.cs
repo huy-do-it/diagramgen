@@ -1,3 +1,4 @@
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Service.DTOs;
 
 namespace UMLForge.Diagram.Service.Interfaces;

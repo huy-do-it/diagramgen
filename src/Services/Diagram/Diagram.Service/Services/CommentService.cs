@@ -1,9 +1,11 @@
 using System.Text.Json;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Outbox;
+using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Interfaces;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Events;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
 
 namespace UMLForge.Diagram.Service.Services;
@@ -14,20 +16,20 @@ public class CommentService : ICommentService
     private readonly IDiagramRepository _diagramRepository;
     private readonly IMemberAccessRepository _memberAccessRepository;
     private readonly ICurrentUser _currentUser;
-    private readonly IOutboxRepository? _outboxRepository;
+    private readonly IOutbox? _outbox;
 
     public CommentService(
         ICommentRepository commentRepository,
         IDiagramRepository diagramRepository,
         IMemberAccessRepository memberAccessRepository,
         ICurrentUser currentUser,
-        IOutboxRepository? outboxRepository = null)
+        IOutbox? outbox = null)
     {
         _commentRepository = commentRepository;
         _diagramRepository = diagramRepository;
         _memberAccessRepository = memberAccessRepository;
         _currentUser = currentUser;
-        _outboxRepository = outboxRepository;
+        _outbox = outbox;
     }
 
     public async Task<CommentResponse> AddCommentAsync(
@@ -66,36 +68,13 @@ public class CommentService : ICommentService
         };
 
         // Outbox event: CommentAdded
-        if (_outboxRepository != null)
-        {
-            var commentAddedEvent = new CommentAdded(
-                comment.Id,
-                diagram.Id,
-                diagram.ProjectId,
-                diagram.Title,
-                _currentUser.UserId,
-                comment.Content
-            );
-
-            var envelope = new EventEnvelope<CommentAdded>(
-                Guid.NewGuid(),
-                "CommentAdded",
-                1,
-                now,
-                Guid.NewGuid(),
-                "diagram",
-                commentAddedEvent
-            );
-
-            _outboxRepository.AddMessage(new OutboxMessage
-            {
-                Id = envelope.EventId,
-                Stream = StreamNames.Diagram,
-                Type = "CommentAdded",
-                Envelope = JsonSerializer.Serialize(envelope),
-                CreatedAt = now
-            });
-        }
+        _outbox?.Add(StreamNames.Diagram, new CommentAdded(
+            comment.Id,
+            diagram.Id,
+            diagram.ProjectId,
+            diagram.Title,
+            _currentUser.UserId
+        ));
 
         await _commentRepository.AddAsync(comment, cancellationToken);
         await _commentRepository.SaveChangesAsync(cancellationToken);
