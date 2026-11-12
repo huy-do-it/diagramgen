@@ -1,0 +1,23 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.trx
+coverage*/
+
+# Node
+node_modules/
+dist/
+
+# Secret / cấu hình máy cá nhân
+.env
+*.env.local
+appsettings.*.local.json
+
+# OS
+.DS_Store
+Thumbs.db

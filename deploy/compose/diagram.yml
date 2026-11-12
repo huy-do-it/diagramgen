@@ -1,0 +1,34 @@
+services:
+  diagram:
+    build:
+      context: ../../src
+      dockerfile: Services/Diagram/Diagram.API/Dockerfile
+    container_name: umlforge-diagram
+    ports:
+      - "5003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DiagramDb=Server=sqlserver,1433;Database=DiagramDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      - Jwt__Key=${JWT_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - REDIS_URL=${REDIS_URL}
+      - DIAGRAM_ENGINE_URL=${DIAGRAM_ENGINE_URL}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - umlforge
+
+networks:
+  umlforge:
+    external: true
+
