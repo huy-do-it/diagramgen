@@ -12,6 +12,7 @@ public interface IDiagramService
     Task<RenderResponse> RequestRenderAsync(Guid diagramId, CancellationToken cancellationToken = default);
     Task<PagedResult<DiagramVersionSummaryResponse>> GetVersionsAsync(Guid diagramId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<DiagramVersionDetailResponse> GetVersionByNumberAsync(Guid diagramId, int version, CancellationToken cancellationToken = default);
+    Task<DiagramDetailResponse> RestoreVersionAsync(Guid diagramId, int version, CancellationToken cancellationToken = default);
     Task<UMLForge.Diagram.Service.Models.Validation.DiagramValidationResult> ValidateDiagramAsync(Guid diagramId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UMLForge.Diagram.Service.Models.Validation.RelationSuggestion>> SuggestRelationsAsync(Guid diagramId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UMLForge.Diagram.Service.Models.Validation.ProjectDiagramValidationResult>> ValidateProjectAsync(Guid projectId, CancellationToken cancellationToken = default);

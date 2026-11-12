@@ -131,7 +131,7 @@ public class ReviewService : IReviewService
                 1,
                 now,
                 Guid.NewGuid(),
-                "diagram-svc",
+                "diagram",
                 reviewSubmittedEvent
             );
 
@@ -263,7 +263,7 @@ public class ReviewService : IReviewService
                 1,
                 now,
                 Guid.NewGuid(),
-                "diagram-svc",
+                "diagram",
                 reviewDecidedEvent
             );
 

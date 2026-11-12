@@ -3,7 +3,11 @@ namespace UMLForge.Diagram.Service.Events;
 public sealed record ReviewDecided(
     Guid ReviewId,
     Guid ProjectId,
-    string Status,
-    Guid DecidedBy,
-    string? Note
-);
+    string Decision,
+    Guid ActorUserId,
+    string? Note = null
+)
+{
+    public string Status => Decision;
+    public Guid DecidedBy => ActorUserId;
+}

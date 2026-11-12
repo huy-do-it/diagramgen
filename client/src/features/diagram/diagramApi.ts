@@ -131,6 +131,15 @@ export const diagramApi = {
     return res.json();
   },
 
+  async restoreVersion(id: string, version: number): Promise<DiagramDetail> {
+    const res = await fetch(`${API_BASE}/diagrams/${id}/versions/${version}/restore`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   async validateDiagram(id: string): Promise<DiagramValidationResult> {
     const res = await fetch(`${API_BASE}/diagrams/${id}/validate`, {
       method: 'POST',

@@ -853,4 +853,121 @@ public class DiagramServiceTests
         // Assert (BR-31: needsResubmit is false)
         Assert.False(updated.NeedsResubmit);
     }
+
+    [Fact]
+    [Trait("BR", "BR-15")]
+    public async Task RestoreVersion_ValidVersion_RestoresSnapshotAndIncrementsVersion()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original V1 Title",
+            ModelJson = ValidUseCaseJson
+        });
+
+        // Update to V2
+        var updatedV2 = await _service.UpdateDiagramAsync(created.Id, new UpdateDiagramRequest
+        {
+            Title = "Updated V2 Title",
+            ModelJson = ValidUseCaseJson
+        }, ifMatch: $"\"{created.ETag}\"");
+
+        Assert.Equal(2, updatedV2.CurrentVersion);
+        Assert.Equal("Updated V2 Title", updatedV2.Title);
+
+        // Act: Restore to V1
+        var restored = await _service.RestoreVersionAsync(created.Id, 1);
+
+        // Assert: Becomes V3 with content of V1, status Draft
+        Assert.Equal(3, restored.CurrentVersion);
+        Assert.Equal("Original V1 Title", restored.Title);
+        Assert.Equal(DiagramStatus.Draft, restored.Status);
+
+        var v3 = await _versionRepository.GetByVersionAsync(created.Id, 3);
+        Assert.NotNull(v3);
+        Assert.Equal("Original V1 Title", v3.Title);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-32")]
+    public async Task RestoreVersion_Lecturer_Throws403()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+
+        var lecturerId = Guid.NewGuid();
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = lecturerId,
+            Role = ProjectRole.Lecturer
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original V1",
+            ModelJson = ValidUseCaseJson
+        });
+
+        _currentUserMock.Setup(u => u.UserId).Returns(lecturerId);
+        _currentUserMock.Setup(u => u.Role).Returns("Lecturer");
+
+        // Act & Assert (BR-32)
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            _service.RestoreVersionAsync(created.Id, 1));
+        Assert.Equal(403, ex.Status);
+        Assert.Equal("BR-32", ex.Code);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-13")]
+    public async Task RestoreVersion_PendingStatus_Throws409()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original V1",
+            ModelJson = ValidUseCaseJson
+        });
+
+        // Set status to Pending
+        var entity = await _diagramRepository.GetByIdAsync(created.Id);
+        entity!.Status = DiagramStatus.Pending;
+        _diagramRepository.Update(entity);
+        await _diagramRepository.SaveChangesAsync();
+
+        // Act & Assert (BR-13)
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            _service.RestoreVersionAsync(created.Id, 1));
+        Assert.Equal(409, ex.Status);
+        Assert.Equal("BR-13", ex.Code);
+    }
 }

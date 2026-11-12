@@ -101,6 +101,20 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
     }
   };
 
+  const handleRestoreVersion = async (versionNumber: number) => {
+    if (!window.confirm(`Bạn có chắc muốn khôi phục sơ đồ về phiên bản v${versionNumber}? Hệ thống sẽ tạo một phiên bản mới từ bản này.`)) {
+      return;
+    }
+    try {
+      await diagramApi.restoreVersion(diagramId, versionNumber);
+      setShowVersionsModal(false);
+      await fetchDiagram();
+      alert(`Đã khôi phục thành công về phiên bản v${versionNumber}!`);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Không thể khôi phục phiên bản.');
+    }
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -276,9 +290,16 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
                       <td>{new Date(v.createdAt).toLocaleString('vi-VN')}</td>
                       <td>{v.createdBy.substring(0, 8)}…</td>
                       <td>
-                        <button className="button button-secondary button-small" onClick={() => handleViewVersion(v.version)}>
-                          Xem JSON
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="button button-secondary button-small" onClick={() => handleViewVersion(v.version)}>
+                            Xem JSON
+                          </button>
+                          {canEdit && v.version !== diagram.currentVersion && (
+                            <button className="button button-ghost button-small" onClick={() => handleRestoreVersion(v.version)}>
+                              Khôi phục
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

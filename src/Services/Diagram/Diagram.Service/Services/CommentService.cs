@@ -72,6 +72,7 @@ public class CommentService : ICommentService
                 comment.Id,
                 diagram.Id,
                 diagram.ProjectId,
+                diagram.Title,
                 _currentUser.UserId,
                 comment.Content
             );
@@ -82,7 +83,7 @@ public class CommentService : ICommentService
                 1,
                 now,
                 Guid.NewGuid(),
-                "diagram-svc",
+                "diagram",
                 commentAddedEvent
             );
 

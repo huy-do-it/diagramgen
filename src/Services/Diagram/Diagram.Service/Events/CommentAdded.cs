@@ -4,6 +4,10 @@ public sealed record CommentAdded(
     Guid CommentId,
     Guid DiagramId,
     Guid ProjectId,
-    Guid AuthorId,
-    string Content
-);
+    string DiagramTitle,
+    Guid ActorUserId,
+    string? Content = null
+)
+{
+    public Guid AuthorId => ActorUserId;
+}

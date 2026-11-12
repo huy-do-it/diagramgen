@@ -61,6 +61,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Create([FromBody] CreateDiagramRequest request, CancellationToken cancellationToken)
     {
         var created = await _diagramService.CreateDiagramAsync(request, cancellationToken);
@@ -83,6 +84,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateDiagramRequest request,
@@ -160,6 +162,29 @@ public class DiagramsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _diagramService.GetVersionByNumberAsync(id, version, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Restores a diagram to a previous version snapshot (creates a new version, BR-15, BR-17).
+    /// </summary>
+    [HttpPost("{id:guid}/versions/{version:int}/restore")]
+    [ProducesResponseType(typeof(DiagramDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RestoreVersion(
+        Guid id,
+        int version,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _diagramService.RestoreVersionAsync(id, version, cancellationToken);
+        var etag = result.ETag;
+        if (!string.IsNullOrEmpty(etag))
+        {
+            Response.Headers.ETag = $"\"{etag}\"";
+        }
         return Ok(result);
     }
 

@@ -481,6 +481,60 @@ public class DiagramService : IDiagramService
         };
     }
 
+    public async Task<DiagramDetailResponse> RestoreVersionAsync(
+        Guid diagramId,
+        int version,
+        CancellationToken cancellationToken = default)
+    {
+        var diagram = await _diagramRepository.GetByIdAsync(diagramId, cancellationToken);
+        if (diagram == null)
+        {
+            throw new BusinessRuleException("NOT_FOUND", $"Diagram with ID '{diagramId}' was not found.", 404);
+        }
+
+        // BR-11 & BR-32: Quyền dự án và chặn Lecturer
+        await EnsureProjectAccessAsync(diagram.ProjectId, allowLecturer: false, cancellationToken);
+
+        // BR-13: Không khôi phục/sửa khi đang Pending hoặc Rendering
+        if (diagram.Status == DiagramStatus.Pending || diagram.Status == DiagramStatus.Rendering)
+        {
+            throw new BusinessRuleException("BR-13", "Cannot restore version while diagram is pending or rendering.", 409);
+        }
+
+        var versionEntity = await _versionRepository.GetByVersionAsync(diagramId, version, cancellationToken);
+        if (versionEntity == null)
+        {
+            throw new BusinessRuleException("NOT_FOUND", $"Version '{version}' for diagram '{diagramId}' was not found.", 404);
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Tăng CurrentVersion và tạo snapshot phiên bản mới từ bản khôi phục
+        diagram.CurrentVersion++;
+        diagram.Title = versionEntity.Title;
+        diagram.ModelJson = versionEntity.ModelJson;
+        diagram.Status = DiagramStatus.Draft; // BR-17
+        diagram.UpdatedAt = now;
+
+        var restoredSnapshot = new DiagramVersion
+        {
+            Id = Guid.NewGuid(),
+            DiagramId = diagram.Id,
+            Version = diagram.CurrentVersion,
+            Title = diagram.Title,
+            ModelJson = diagram.ModelJson,
+            CreatedBy = _currentUser.UserId,
+            CreatedAt = now
+        };
+
+        _diagramRepository.Update(diagram);
+        await _versionRepository.AddAsync(restoredSnapshot, cancellationToken);
+        await _diagramRepository.SaveChangesAsync(cancellationToken);
+
+        var etag = Convert.ToBase64String(diagram.RowVersion);
+        return MapToDetail(diagram, etag);
+    }
+
     private async Task EnsureProjectAccessAsync(Guid projectId, bool allowLecturer, CancellationToken cancellationToken)
     {
         var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
