@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.10.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Workspace.Repositories\Workspace.Repositories.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Events\UMLForge.Contracts.Events.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Auth\UMLForge.BuildingBlocks.Auth.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.EventBus\UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Jobs\UMLForge.BuildingBlocks.Jobs.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Outbox\UMLForge.BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Web\UMLForge.BuildingBlocks.Web.csproj" />
+  </ItemGroup>
+</Project>
