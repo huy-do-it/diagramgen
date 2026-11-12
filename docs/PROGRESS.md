@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — Bảo
-**Giai đoạn hiện tại:** Trước ngày 1 — chưa bắt đầu code (đang chốt tài liệu). Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Cập nhật lần cuối:** 12/11/2026 — Minh (M-02 được nghiệm thu và giao Git delivery; chuẩn bị M-03)
+**Giai đoạn hiện tại:** M-01 PR #1 đang mở vào develop. Minh đã nghiệm thu M-02 và giao commit/push/PR; chuẩn bị M-03 theo contract. B-01/B-02/B-04 và ghép toàn hệ thống còn chờ. Kế hoạch 4 ngày, xem TASKS.md §0.2
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
-| Minh | ⬜ M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
+| Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ⬜ B-01 · ⬜ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 0/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
@@ -28,6 +28,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 |---|---|---|---|
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
+| 12/11/2026 | M-01 final source review + Git delivery | Minh | Commit `590674c`, [PR #1](https://github.com/huy-do-it/diagramgen/pull/1) vào develop, OPEN/chưa merge. Fresh build0warning/error, unit43/43 và SQL/PlantUML10/10 PASS; chưa nhận Done toàn DoD. |
 
 ### 2.1 Quyết định đã chốt
 
@@ -46,6 +47,17 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Task | Người | Bắt đầu | Ghi chú |
 |---|---|---|---|
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
+| M-01 review/integration | Minh | 12/11/2026 | PR #1 đang mở. Đối chiếu6docs PASS; sửa UTC Kind SQL readback. Adapter controlled gRPC7/7 và host4/4 PASS; B-01/B-04 team integration NOT RUN. Không có CI workflow trên baseline, không nhận local PASS là CI xanh. |
+| M-02 delivery/integration | Minh | 12/11/2026 | Branch `feature/minh-m02-notification-api` độc lập từ develop `0e86974`; Minh nghiệm thu và giao Git delivery. Source khớp manifest29/29 trước thay checkpoint docs. Release0warning/error,19unit PASS/0skip và44real API/SQL assertions PASS. B-01/Identity/Gateway acceptance còn chờ. |
+| M-03 preparation | Minh | 12/11/2026 | Chưa code. Cần source M-01 (PR #1 chưa merge) + B-01 Contracts.Events + B-02 Outbox/EventBus. Develop hiện chỉ có .gitkeep; tools/seed-events.ps1 chưa có. Chưa tạo bản thay thế các gói của Bảo. |
+
+### Minh — checkpoint M-01/M-02
+
+- Minh cho phép tạo develop từ main `0e86974`, mở PR M-01 vào develop theo RULES; không merge/main changes. M-02 không base trên PR M-01 chưa merge. M-01 có35file mới Render + checkpoint PROGRESS; M-02 chỉ Notification + checkpoint PROGRESS.
+- M-02 áp dụng BR-33 ở service và owner filter trong SQL; read/read-all conditional update không làm mới ReadAt khi gọi lặp/đồng thời. Seed chỉ Development + Admin, tạo5thông báo cho chính Admin. Timestamps UTC; ProblemDetails có traceId/code/errors; CorrelationId giữ cả khi exception.
+- B-01 chưa publish Web/Auth. M-02 bootstrap JWT Bearer/ProblemDetails/Swagger trực tiếp trong API theo contract TASKS, không tạo shared library thay Bảo hoặc phát token. JSON page đúng shape PagedResult. Khi B-01 có cần thay wiring sang shared defaults và kiểm tra lại; chưa nhận acceptance B-01/Identity/Gateway.
+- Runtime test .NET8.0.32 riêng; SQL2022 container fixture không mount dữ liệu v1. JWT fixture và runners ngoài source, không secret trong appsettings. Evidence workspace `assignment-planning/v2-m01-evidence/` và `v2-m02-evidence/`; contract/chạy M-02 tại `src/Services/Notification/README.md`.
+- M-03/M-04 còn cần thống nhất Inbox/ACK transaction, handler<5s vs pipeline30s, pending replay, interrupted existing job, ownership khi hai Worker và retry/event ordering. M-05 còn cần thống nhất actor/requestedBy và recipient ordering. Chưa tự đổi shared contract hoặc bắt đầu các task này.
 
 ---
 
@@ -53,7 +65,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | # | Mô tả | Mức độ | Service | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| — | *(chưa có — v2 chưa có code)* | | | | |
+| — | Không còn lỗi đã tái hiện chưa xử lý trong M-01/M-02 local scope | | | | Shared dependency và integration vẫn đang chờ, không đồng nghĩa toàn hệ thống đã đạt. |
 
 **Rủi ro kỹ thuật đã biết trước (từ v1 và thiết kế):**
 
