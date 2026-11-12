@@ -12,7 +12,7 @@
 
 | Người | Ngày 1 | Ngày 2 | Ngày 3 | Ngày 4 sáng | Xong |
 |---|---|---|---|---|---|
-| Huy | ✅ H-01 · ✅ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 2/7 |
+| Huy | ✅ H-01 · ✅ H-02 | ✅ H-03 · ✅ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 4/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
 | Minh | 🟨 M-01 · 🟨 M-02 | 🟨 M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ✅ B-01 · ✅ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 2/7 |
@@ -28,6 +28,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 |---|---|---|---|
 | 12/11/2026 | Soạn bản nháp PRD, ARCHITECTURE, DESIGN, RULES, TASKS, PROGRESS | Bảo | `docs/rebuild/` — chờ nhóm duyệt |
 | 12/11/2026 | H-01 (Identity Auth, BCrypt, JWT, Refresh Token BR-01..05) & H-02 (Admin Users, Outbox Events, Purge Tokens Job) | Huy | `feature/huy-identity` — 48/48 tests PASS, build 0 warnings |
+| 12/11/2026 | **H-03/H-04** Workspace Service (Project, Members, Invitations, UserDirectory, ExpireInvitationsJob, BR-06..10) | Huy | 30/30 tests PASS (25 BR tests), build 0 warnings/errors, Outbox/Inbox integrated |
 | 12/11/2026 | Tinh gọn phạm vi: bỏ Hangfire, realtime (Pub/Sub + SSE), email; giữ thông báo trong app | Bảo | Xem mục 2.1 |
 | 12/11/2026 | **B-01** Khung repo + Contracts (16 sự kiện, proto 4 RPC) | Bảo | `aca973f` |
 | 12/11/2026 | **B-01** BuildingBlocks Auth + Web + Jobs | Bảo | `83667c4` — kiểm bằng API mẫu: ProblemDetails, JWT, chạy job tay |
@@ -163,6 +164,15 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 ---
 
 ## 8. Nhật ký
+
+### 12/11/2026 — Huy
+- Xong: H-03 (Project & Member Management, soft-delete, ETag concurrency, BR-06..08) & H-04 (Invitations, UserDirectory sync, ExpireInvitationsJob, BR-09..10).
+- Test: 30/30 tests PASS (25 BR tests covering BR-06, BR-07, BR-08, BR-09, BR-10, BR-16; 4 directory sync idempotency tests; 1 background expiration job test).
+- Build: `dotnet build src/Services/Workspace/Workspace.sln --warnaserror` 0 warnings, 0 errors.
+- Compose: Kích hoạt `deploy/compose/workspace.yml` (port 5002, WorkspaceDb, Redis).
+- Bug mới: không.
+- Bị chặn bởi: không.
+- Tiếp theo: H-05 Frontend Workspace Feature (Project list, member management, invitation UI).
 
 ### 12/11/2026 — Bảo
 - Xong: B-01 (4 commit: khung repo + Contracts · Auth/Web/Jobs · Outbox/EventBus · tools/client/compose). Phần code chính của B-02 (Outbox, EventBus, ScheduledJobBase) cũng đã nằm trong B-01.
