@@ -1,94 +1,82 @@
-# Render — M-01
+# Render — M-01 + M-03
 
-Phạm vi: RenderDb, migration, repository, pipeline và host tối thiểu .NET 8.
-Contract chung: `docs/TASKS.md` §1 và §4. Không có consumer/Outbox (M-03),
-reconcile/cleanup/admin API (M-04), Docker (M-07) trong M-01.
+Render sở hữu RenderDb; giữ Layered Architecture Worker → Service → Repository.
+Nguồn contract: docs/TASKS.md §1/§4 và Contracts/BuildingBlocks của Bảo.
+M-04 (reconcile/cleanup/report/admin jobs), Docker M-07 và tích hợp toàn nhóm chưa thực hiện ở đây.
 
-## Cấu trúc và transaction
+## Luồng xử lý và transaction
 
-- `Render.Worker`: composition root, migration khi khởi động, `/health` kiểm tra SQL thật.
-- `Render.Service`: `IRenderPipeline.ProcessJobAsync(RenderJob, CancellationToken)`
-  trả `RenderResult`; Validate → GeneratePlantUml qua Engine → HTTP PlantUML → SVG.
-- `Render.Repositories`: RenderJobs, RenderArtifacts, RenderDailyReports và migration `InitRender`.
-- `Render.Tests`: unit tests bằng HTTP/Engine được kiểm soát; không nhận là E2E.
+1. Shared consumer đọc diagram.events, group render-svc, kiểm tra Inbox rồi gọi
+   RenderRequestedHandler. Handler kiểm tra snapshot, bỏ qua business key đã tồn tại,
+   thêm job Queued; **không gọi SaveChanges hoặc pipeline**.
+2. Shared dispatcher commit job + Inbox trong một SaveChanges rồi ACK. Lỗi SQL khi
+   intake được ném lên, không ACK; shared consumer retry pending/DLQ theo B-02.
+3. RenderJobProcessor tạo DI scope mới mỗi vòng. RenderJobRunner claim job Queued:
+   đổi Running, tăng Attempt và thêm Outbox RenderStarted trong cùng SaveChanges.
+   Status + Attempt là concurrency tokens; hai Worker tranh cùng hàng chỉ một bên thắng.
+4. Pipeline Validate → GeneratePlantUml qua gRPC → HTTP PlantUML chạy ngoài SQL transaction.
+   Thành công: Done + artifact + Outbox RenderCompleted commit cùng nhau. Lỗi nghiệp vụ
+   hoặc timeout: Failed + Error + Outbox RenderFailed, giữ artifact cũ nếu có.
+5. Shared Outbox publisher chuyển sự kiện sang render.events. Redis down không làm mất
+   kết quả đã commit; publisher retry. Delivery có thể trùng, consumer phải dùng Inbox.
 
-Pipeline không mutate/persist job và không phát event. M-03 sẽ lưu trạng thái,
-artifact và Outbox trong cùng transaction qua repository. Failure không trả artifact
-mới; caller phải giữ artifact thành công cũ. Lỗi gRPC hạ tầng (`Unavailable`,
-`Internal`...) được propagate để consumer quyết định retry; lỗi model/deadline/renderer
-trả outcome thất bại an toàn. Cancellation của caller được propagate, không chuyển
-shutdown thành Failed. Chưa có multi-worker claim/idempotency/recovery acceptance ở M-01.
+**ACK xác nhận đã lưu yêu cầu bền vững, không xác nhận render hoàn tất.** Đây là điều chỉnh
+M-03 đã được Minh duyệt so với pseudocode chạy pipeline ngay trong handler ở TASKS.md,
+để tuân thủ PROGRESS N-04: dispatcher sở hữu SaveChanges cùng Inbox và handler phải nhanh.
+Không thay shared EventBus/Outbox hoặc schema sự kiện của Bảo.
 
-`DiagramType` là mã int 1–5 của TASKS; không tạo enum trùng trong Contracts.
-Job có unique `(DiagramId, DiagramVersion)`; Artifact FK chỉ tới job trong RenderDb.
-Repository query hiện dành cho update nên tracking; chưa có API danh sách.
+Unique (DiagramId, DiagramVersion) chặn job trùng cả khi intake đồng thời. EventId trùng
+do Inbox xử lý; event mới cùng version không tạo job khác. Snapshot/RequestedBy lấy từ
+payload; CorrelationId lưu từ envelope, khôi phục khi chạy pipeline và truyền tới gRPC,
+log, Outbox. Migration nâng từ M-01 giữ job/artifact cũ; correlation rỗng của job cũ dùng
+JobId làm fallback.
 
-## B-01/B-04 dependency
+Lỗi hạ tầng sau claim hoặc shutdown giữ job **Running** đã commit, không tạo kết quả giả.
+Job Queued tiếp tục sau restart; **phục hồi Running cần M-04**, hiện chưa tự chạy lại.
+Lỗi commit cuối rollback trạng thái, artifact và completion event cùng nhau. Status/Attempt
+cũng chặn writer cũ khi ownership đã đổi. Không nhận là exactly-once network execution.
 
-Baseline `0e86974` chưa có project `UMLForge.Contracts.Grpc`. M-01 **không** tạo
-proto/Contracts thay Bảo. Khi project ở đường dẫn chuẩn tồn tại, ProjectReference
-và adapter `GrpcDiagramEngineClient` tự được compile. Adapter dùng `AddGrpcClient`,
-deadline 5 giây/RPC, tối đa 2 retry chỉ khi Unavailable, truyền Activity TraceId
-qua `x-correlation-id`.
+## Pipeline và cấu hình
 
-Khi chưa có contract, build phần độc lập được nhưng real mode dừng startup bằng lỗi
-rõ ràng. Không tự fallback sang fake. `DiagramEngine:UseFake=true` chỉ được dùng
-trong Development và host luôn ghi cảnh báo. Fake trả một sequence Alice→Bob,
-không kiểm chứng semantics của 5 loại diagram.
+Pipeline trả RenderResult, không tự persist job hoặc phát event. Caller cancellation
+được propagate; gRPC hạ tầng được propagate; model/deadline/renderer trả outcome an toàn.
+Ngân sách pipeline mặc định/tối đa 30 giây (BR-27), RPC deadline 5 giây, tối đa 2 retry
+chỉ khi Unavailable. JSON tối đa 256 KiB UTF-8, SVG tối đa 2,000,000 bytes; kiểm tra
+HTTP/media type/XML/root, cấm DTD và active content cơ bản. UI vẫn phải sanitize SVG.
 
-Ngân sách toàn pipeline mặc định/tối đa 30 giây (BR-27); HTTP client có thêm timeout
-30 giây. Response body cũng chịu timeout/cancellation. JSON giới hạn 256 KiB UTF-8,
-SVG tối đa 2,000,000 bytes; kiểm tra HTTP/error header/media type/XML/root, cấm DTD
-và active content cơ bản. Frontend vẫn cần sanitizer theo RULES trước khi chèn SVG.
+Worker dùng shared Web/Auth defaults, SQL health check /health, migration khi startup.
+Không có public render/admin route mới. Appsettings không chứa secret. Cần đặt qua
+environment hoặc secret store:
 
-## Chạy độc lập
+- ConnectionStrings__RenderDb, ConnectionStrings__Redis, Jwt__Key theo B-01.
+- DiagramEngine__Url, PlantUml__BaseUrl trỏ tới các service đang chạy.
+- DiagramEngine__UseFake=true chỉ khi chủ động test trong Development; Production từ chối fake.
 
-Từ thư mục này:
+Từ thư mục Render, dùng .NET 8 SDK theo global.json ở gốc repo:
 
-```powershell
+~~~powershell
 dotnet build Render.sln -c Release /warnaserror
 dotnet test Render.sln -c Release --no-build
-# Cung cấp connection tới DB/fixture riêng bằng secret environment của máy.
-# ConnectionStrings__RenderDb=<connection riêng, không commit/log>
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-$env:DiagramEngine__UseFake = 'true' # chỉ khi chủ động test bằng fake
 dotnet run --project Render.Worker
-```
+~~~
 
-Host mặc định qua launch profile ở `http://localhost:5004`, chỉ có `/health`.
-Chưa có public render route hoặc Swagger/admin API để tránh tạo contract ngoài M-01.
-Appsettings không chứa connection/secret; real mode mặc định `UseFake=false`.
-Trước khi chạy thật, B-01 Web/Auth defaults và B-04 Engine cần được ghép/kiểm tra lại.
+Máy Minh dùng SDK 8.0.428/runtime 8.0.34 riêng tại
+C:/Users/phamv/AppData/Local/Microsoft/UMLForge/dotnet8-sdk, không đổi global.json/PATH.
 
-Máy Minh có ASP.NET 8.0.34 nhưng thiếu Core cùng patch. Lượt test bị aborted đã được
-giữ evidence. Kiểm thử thành công dùng runtime riêng .NET 8.0.32 đã có, không đổi
-runtime toàn máy. Local workaround:
+## Verification M-03 — 12/11/2026
 
-```powershell
-$env:DOTNET_ROOT_X64 = 'C:/Users/phamv/AppData/Local/Microsoft/UMLForge/dotnet8'
-dotnet build Render.sln -c Release /warnaserror -p:RuntimeFrameworkVersion=8.0.32
-dotnet test Render.sln -c Release --no-build
-```
+- Release /warnaserror: 0 warning/error; 54 unit PASS, 0 FAIL/SKIP (11 test mới).
+- 24/24 checks PASS với SQL Server 2022 + Redis Streams 7 + HTTP PlantUML thật và
+  hai production Worker processes: migration nâng M-01, intake rollback/pending replay,
+  restart Queued sau ACK, duplicate/race, atomic claim/final writes, Redis outage/publisher
+  recovery, stale writer, giữ SVG cũ, timeout, DLQ, shutdown và durable correlation.
+- Generated gRPC client dùng Contracts thật của Bảo, gọi controlled HTTP/2 server;
+  cả Validate và Generate nhận đúng CorrelationId. **Chưa kiểm chứng semantics B-04.**
+- Shared seed-events chưa có trên baseline; harness ngoài repo phát canonical envelope
+  vào Redis fixture, không bổ sung tool thay Bảo. Diagram producer/consumer, Gateway,
+  browser, Compose toàn nhóm và CI: chưa nghiệm thu.
 
-## Verification 12/11/2026
-
-- Release /warnaserror: 0 warning/error; unit 43 PASS, 0 FAIL, 0 SKIP.
-- SQL Server 2022 + HTTP PlantUML thật, Engine fake: 10 assertions PASS sau review
-  (migration/rerun, render SVG, repository reload, version lookup, unique job,
-  artifact FK, snapshot constraints, report date roundtrip/unique, UTC timestamp roundtrip).
-- Adapter compile + HTTP/2 controlled fixture theo TASKS §1.7: 7 assertions PASS
-  (retry, correlation, deadline, payload/mapping, invalid result, cancellation,
-  actual timeout). Đây là test fixture ngoài repo, **không** phải B-01/B-04 thật.
-- Host 4 assertions PASS: startup/migration + SQL health 200, SQL down health 503,
-  từ chối fake ở Production, từ chối real mode khi thiếu B-01 contract.
-- Team Engine/Streams/Gateway/browser: NOT RUN, thuộc các bước tích hợp sau.
-
-Evidence ngoài repo: `../assignment-planning/v2-m01-evidence/` tính từ repository root.
-SQL/PlantUML chạy trong container fixture riêng, từ image local `umlforge-local`
-chỉ khởi động riêng SQL hoặc Jetty bằng entrypoint override; không mount dữ liệu v1.
-
-Final source review đối chiếu đủ 6 docs: PASS trong phạm vi M-01. Sửa duy nhất sau
-review: khôi phục UTC DateTime.Kind khi materialize SQL datetime2 theo RULES §6;
-không đổi schema, migration/model diff không có pending changes. M-01 đủ điều kiện
-giao review PR và bắt đầu M-02 độc lập. Shared defaults/Engine, CI và E2E toàn hệ
-thống vẫn là acceptance tích hợp sau, không được suy ra PASS từ component tests.
+Evidence workspace ngoài repo: ../assignment-planning/v2-m03-evidence/ tính từ repo root;
+unit tests nằm trong Render.Tests. SQL/Redis/PlantUML dùng container fixture riêng,
+không mount dữ liệu v1. Các lần thử harness ban đầu và kết quả cuối được giữ riêng;
+24/24 không phải acceptance WF toàn hệ thống. Evidence M-01 giữ ở v2-m01-evidence/.

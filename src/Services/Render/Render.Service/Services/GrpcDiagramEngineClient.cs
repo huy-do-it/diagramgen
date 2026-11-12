@@ -1,7 +1,7 @@
-#if HAS_GRPC_CONTRACT
 using System.Diagnostics;
 using Grpc.Core;
 using UMLForge.Contracts.Grpc;
+using UMLForge.Contracts.Events;
 using UMLForge.Render.Service.Interfaces;
 
 namespace UMLForge.Render.Service.Services;
@@ -29,9 +29,9 @@ public sealed class GrpcDiagramEngineClient(DiagramEngineService.DiagramEngineSe
     private static Metadata CreateHeaders()
     {
         var headers = new Metadata();
-        if (Activity.Current is { } activity)
-            headers.Add("x-correlation-id", activity.TraceId.ToString());
+        var correlation = CorrelationContext.Current?.ToString() ?? Activity.Current?.TraceId.ToString();
+        if (correlation is not null)
+            headers.Add(CorrelationKeys.GrpcMetadata, correlation);
         return headers;
     }
 }
-#endif
