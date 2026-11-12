@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — Minh gộp checkpoint Bảo/Minh khi resolve PR #3
-**Giai đoạn hiện tại:** M-01/M-02 đã merge vào develop qua PR #1/#2; B-01/B-02 có source và evidence của Bảo trong PR #3, đang chờ review/merge. Chuẩn bị ghép dependencies cho M-03. Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Cập nhật lần cuối:** 12/11/2026 — Minh triển khai và kiểm thử M-03 local
+**Giai đoạn hiện tại:** PR #1/#2/#3 đã merge vào develop; baseline M-03 `64ae612`. M-03 local verified trên `feature/minh-m03-render-consumer`, chờ Minh review/Git delivery; chưa bắt đầu M-04. Kế hoạch 4 ngày, xem TASKS.md §0.2
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
-| Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
+| Minh | 🟨 M-01 · 🟨 M-02 | 🟨 M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ✅ B-01 · ✅ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 2/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
@@ -70,7 +70,15 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
 | M-01 review/integration | Minh | 12/11/2026 | PR #1 đã merge tại 5b7dc6c. Đối chiếu6docs PASS; sửa UTC Kind SQL readback. Adapter controlled gRPC7/7 và host4/4 PASS; B-01/B-04 team integration NOT RUN. Không có CI workflow trên baseline, không nhận local PASS là CI xanh. |
 | M-02 integration (đã merge PR #2) | Minh | 12/11/2026 | Branch `feature/minh-m02-notification-api` độc lập từ develop `0e86974`; Minh nghiệm thu và giao Git delivery. Source khớp manifest29/29 trước thay checkpoint docs. Release0warning/error,19unit PASS/0skip và44real API/SQL assertions PASS. B-01/Identity/Gateway acceptance còn chờ. |
-| M-03 preparation | Minh | 12/11/2026 | Chưa code. M-01 đã có trên develop; còn cần B-01 Contracts.Events + B-02 Outbox/EventBus trong PR #3 (chờ merge/kiểm tra tích hợp); tools/seed-events.ps1 chưa có. Chưa tạo bản thay thế các gói của Bảo. |
+| M-03 local verified | Minh | 12/11/2026 | Dùng Contracts/BuildingBlocks thật sau PR #3. Release 0 warning/error, 54/54 unit và 24/24 SQL/Redis/PlantUML checks PASS; chờ Minh review, chưa commit/push/PR. B-04 semantics/Diagram/Gateway/full Compose chưa nghiệm thu. |
+
+### M-03 — contract và evidence hiện tại
+
+- Minh đã duyệt durable handoff: handler chỉ thêm Queued; shared dispatcher commit job + Inbox rồi ACK theo N-04. Processor riêng commit Running + Started Outbox trước pipeline; commit Done/artifact/Completed hoặc Failed/Failed Outbox cùng transaction sau pipeline. Đây là điều chỉnh so với pseudocode inline handler ở TASKS M-03; ACK xác nhận intake bền vững, không phải render hoàn tất.
+- Unique diagram/version chặn intake trùng; Status + Attempt concurrency tokens chặn claim đôi và stale writer. CorrelationId được lưu, khôi phục cho gRPC/log/Outbox. Không sửa source/shared contracts của Bảo hoặc module đồng đội.
+- 24 checks dùng SQL Server 2022, Redis Streams 7, HTTP PlantUML thật, hai Worker processes và controlled Engine: pending replay/intake rollback, restart Queued sau ACK, duplicate/race, atomic claim/final writes, Redis outage/outbox recovery, timeout/DLQ, artifact cũ, shutdown, migration nâng M-01 và gRPC metadata. SDK 8.0.428/runtime 8.0.34 riêng; 54 unit PASS/0 skip.
+- Running gián đoạn/lỗi hạ tầng sau claim được giữ bền vững; **recovery thuộc M-04**, chưa tự phục hồi Running. Không nhận exactly-once transport hoặc toàn bộ WF acceptance. Shared seed-events chưa có; harness ngoài repo dùng canonical envelope thay cho bước manual seed, không thêm tool thay Bảo.
+- Evidence local ngoài repo: `../assignment-planning/v2-m03-evidence/`; contract/chạy service tại `src/Services/Render/README.md`. Lần harness đầu lỗi compile và một lượt wait-condition chưa ổn định đã sửa trong harness; kết quả cuối 24/24, không sửa product để né kiểm tra.
 
 ### Minh — checkpoint trước PR #3 (lịch sử, giữ bằng chứng)
 
@@ -95,7 +103,7 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 | # | Mô tả | Mức độ | Service | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| — | Chưa ghi nhận bug đang mở trong checkpoint M-01/M-02; source B-01/B-02 đang chờ review PR #3 | | | | Không suy ra toàn hệ thống đã được nghiệm thu. |
+| — | Chưa ghi nhận bug sản phẩm đang mở trong phạm vi M-03 đã kiểm thử; Running recovery còn thuộc M-04 | | Render | Pending M-04/integration | PR #3 đã merge; B-04 semantics và toàn hệ thống chưa nghiệm thu. |
 
 **Rủi ro kỹ thuật đã biết trước (từ v1 và thiết kế):**
 

@@ -14,6 +14,10 @@ public sealed class RenderJobRepository(RenderDbContext context) : IRenderJobRep
 
     public void Add(RenderJob job) => context.RenderJobs.Add(job);
 
+    public Task<RenderJob?> GetNextQueuedAsync(CancellationToken cancellationToken = default)
+        => context.RenderJobs.Include(x => x.Artifact).Where(x => x.Status == RenderJobStatus.Queued)
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).FirstOrDefaultAsync(cancellationToken);
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => context.SaveChangesAsync(cancellationToken);
 }

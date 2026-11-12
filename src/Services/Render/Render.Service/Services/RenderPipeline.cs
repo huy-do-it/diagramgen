@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using UMLForge.Render.Repositories.Entities;
 using UMLForge.Render.Service.Interfaces;
 using UMLForge.Render.Service.Models;
+using UMLForge.Contracts.Events;
 
 namespace UMLForge.Render.Service.Services;
 
@@ -94,7 +95,7 @@ public sealed class RenderPipeline(
         {
             cancellationToken.ThrowIfCancellationRequested();
             logger.LogWarning("Render Job {JobId}, CorrelationId {CorrelationId} failed: {Reason}",
-                job.Id, Activity.Current?.TraceId.ToString(), error);
+                job.Id, CorrelationContext.Current?.ToString() ?? Activity.Current?.TraceId.ToString(), error);
             return new RenderResult(null, null, error, ElapsedMs());
         }
     }
