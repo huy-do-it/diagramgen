@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactElement } from 'react';
 import { Route } from 'react-router';
 import { DiagramViewPage } from './DiagramViewPage';
 import { DiagramListPanel } from './DiagramListPanel';
@@ -8,20 +9,20 @@ import { DiagramType } from './types';
 
 const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000001';
 
-export const diagramRoutes = [
+export const diagramRoutes: ReactElement[] = [
   <Route
     key="diagram-list"
-    path="/diagrams"
+    path="diagrams"
     element={<DiagramStudioLayout><DiagramListWrapper /></DiagramStudioLayout>}
   />,
   <Route
     key="diagram-view"
-    path="/diagrams/:diagramId"
+    path="diagrams/:diagramId"
     element={<DiagramStudioLayout><DiagramViewWrapper /></DiagramStudioLayout>}
   />,
   <Route
     key="diagram-review"
-    path="/reviews"
+    path="reviews"
     element={<DiagramStudioLayout><ReviewPanelWrapper /></DiagramStudioLayout>}
   />,
 ];

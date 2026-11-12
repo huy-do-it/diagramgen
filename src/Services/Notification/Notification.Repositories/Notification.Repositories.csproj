@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>UMLForge.Notification.Repositories</RootNamespace>
+    <AssemblyName>UMLForge.Notification.Repositories</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Outbox/UMLForge.BuildingBlocks.Outbox.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.33" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.33" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

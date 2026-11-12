@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+option csharp_namespace = "UMLForge.Contracts.Grpc";
+
+package diagramengine;
+
+// Engine kiểm tra luật UML và sinh PlantUML (TASKS §1.7).
+// Chỉ được THÊM field/RPC; không đổi số field — field bỏ đi dùng `reserved`.
+service DiagramEngineService {
+  rpc ValidateDiagram  (DiagramValidationRequest)  returns (DiagramValidationResponse);       // v1
+  rpc SuggestRelations (RelationSuggestionRequest) returns (RelationSuggestionResponse);      // v1
+  rpc GeneratePlantUml (GeneratePlantUmlRequest)   returns (GeneratePlantUmlResponse);        // mới
+  rpc ValidateProject  (ProjectValidationRequest)  returns (stream ProjectDiagramValidation);  // mới, server streaming
+}
+
+message DiagramValidationRequest {
+  int32 diagram_type = 1;   // 1=BusinessContext, 2=UseCase, 3=Sequence, 4=Activity, 5=State
+  string model_json = 2;
+}
+
+message DiagramValidationResponse {
+  bool is_valid = 1;
+  repeated string errors = 2;
+  repeated string warnings = 3;
+}
+
+message RelationSuggestionRequest {
+  int32 diagram_type = 1;
+  string model_json = 2;
+}
+
+message RelationSuggestionResponse {
+  repeated RelationSuggestion suggestions = 1;
+}
+
+message RelationSuggestion {
+  string from = 1;
+  string to = 2;
+  string description = 3;
+}
+
+message GeneratePlantUmlRequest {
+  int32 diagram_type = 1;
+  string model_json = 2;
+  string title = 3;
+}
+
+message GeneratePlantUmlResponse {
+  string plant_uml = 1;
+}
+
+message ProjectValidationRequest {
+  repeated ProjectDiagramItem diagrams = 1;
+}
+
+message ProjectDiagramItem {
+  string diagram_id = 1;
+  int32 diagram_type = 2;
+  string model_json = 3;
+}
+
+message ProjectDiagramValidation {
+  string diagram_id = 1;
+  DiagramValidationResponse result = 2;
+}

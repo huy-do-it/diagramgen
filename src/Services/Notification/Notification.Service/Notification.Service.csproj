@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>UMLForge.Notification.Service</RootNamespace>
+    <AssemblyName>UMLForge.Notification.Service</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Notification.Repositories/Notification.Repositories.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.EventBus/UMLForge.BuildingBlocks.EventBus.csproj" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+  </ItemGroup>
+</Project>

@@ -14,11 +14,11 @@ import { workspaceRoutes } from './features/workspace/routes';
 export default function App() {
   return <BrowserRouter><AuthProvider><Routes>
     {identityPublicRoutes}
-    {diagramRoutes}
     <Route element={<RequireAuth />}><Route element={<AppLayout />}>
       <Route index element={<Navigate to="/projects" replace />} />
       {identityRoutes}
       {workspaceRoutes}
+      {diagramRoutes}
       {editorRoutes}
       {renderRoutes}
       {notificationRoutes}

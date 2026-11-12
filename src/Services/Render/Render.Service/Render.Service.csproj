@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>UMLForge.Render.Service</RootNamespace>
+    <AssemblyName>UMLForge.Render.Service</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Render.Repositories/Render.Repositories.csproj" />
+    <ProjectReference Include="../../../Contracts/UMLForge.Contracts.Grpc/UMLForge.Contracts.Grpc.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.EventBus/UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/UMLForge.BuildingBlocks.Web/UMLForge.BuildingBlocks.Web.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.60.0" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+  </ItemGroup>
+</Project>
