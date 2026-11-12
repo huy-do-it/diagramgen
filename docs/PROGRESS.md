@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — Bảo
-**Giai đoạn hiện tại:** Trước ngày 1 — chưa bắt đầu code (đang chốt tài liệu). Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Cập nhật lần cuối:** 12/11/2026 — Minh (M-01 final source review PASS, Git delivery được giao)
+**Giai đoạn hiện tại:** M-01 đạt phạm vi độc lập, đủ điều kiện mở PR và chuyển M-02. B-01/B-04 và acceptance tích hợp toàn hệ thống còn chờ. Kế hoạch 4 ngày, xem TASKS.md §0.2
 
 ---
 
@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
-| Minh | ⬜ M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
+| Minh | 🟨 M-01 · ⬜ M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
 | Bảo | ⬜ B-01 · ⬜ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 0/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
@@ -46,6 +46,16 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | Task | Người | Bắt đầu | Ghi chú |
 |---|---|---|---|
 | Chốt tài liệu | Cả nhóm | — | Đọc TASKS.md mục 1 (hợp đồng chung) và trả lời câu hỏi mở ở mục 6 trước ngày 1 |
+| M-01 | Minh | 12/11/2026 | Branch `feature/minh-m01-render-pipeline` từ `0e86974`; final review 6 docs PASS sau sửa UTC readback. Fresh Release 0 warning/error, unit43/43 và SQL+PlantUML10/10 PASS; controlled gRPC7/7 và host4/4 PASS. Minh giao commit/push/PR vào develop; không tự merge hoặc đánh Done toàn DoD. |
+
+### M-01 — checkpoint local
+
+- Chỉ source trong `src/Services/Render/`; pipeline trả outcome, M-03 sẽ commit job/artifact/Outbox cùng transaction. Không có Streams/consumer/recovery/admin API hoặc Notification implementation.
+- B-01 hiện chưa có shared project/BuildingBlocks; không tạo Contracts thay Bảo. Adapter compile khi project contract chuẩn tồn tại; thiếu contract thì real mode từ chối startup, Development phải chủ động bật fake.
+- SQL/PlantUML thật trong fixture riêng; Engine fake. Adapter được build/chạy qua HTTP/2 với proto/server fixture theo TASKS ngoài repo; không nhận là kiểm thử Engine của nhóm. Host smoke 4/4 PASS (SQL health 200/503, Production fake rejection, missing-contract rejection). Team gRPC/Streams/Gateway/browser NOT RUN.
+- Lượt test đầu bị aborted vì Core runtime thiếu patch tương ứng ASP.NET; final tests dùng runtime riêng .NET 8.0.32. Không sửa runtime hệ thống. Chi tiết tại `src/Services/Render/README.md`; evidence ngoài repo ở workspace `assignment-planning/v2-m01-evidence/`.
+- M-03/M-04 cần chốt lại transaction Inbox/ACK, pending replay, job đã tồn tại nhưng gián đoạn, quyền ghi khi hai Worker/retry và event ordering với Bảo/Thiện. Chưa tự đổi contract chung.
+- Git workflow: Minh cho phép tạo `develop` từ main `0e86974` vì remote ban đầu chỉ có main; PR M-01 nhắm develop theo RULES. Không đổi main, không thêm CI thay Bảo.
 
 ---
 
