@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import type { UserRole } from '../auth/AuthContext';
 import { Brand } from './Brand';
+import { NotificationBell } from '../features/notification/NotificationBell';
 
 const roleLabels: Record<UserRole, string> = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Admin: 'Quản trị viên' };
 
@@ -35,7 +36,7 @@ export function AppLayout() {
       <header className="topbar">
         <span className="workspace-label">Không gian nhóm</span>
         <div className="account">
-          {/* Chuông thông báo (M-06) gắn tại đây — 1 dòng */}
+          <NotificationBell />
           <div className="account-name"><strong>{user?.fullName || user?.username}</strong>
             <span>{user ? roleLabels[user.role] : ''}</span></div>
           <button className="button button-secondary" onClick={signOut}>Đăng xuất</button>
