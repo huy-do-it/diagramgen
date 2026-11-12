@@ -61,6 +61,18 @@ public sealed class NotificationEventHandlerTests
         await Send(Handler(), new CommentAdded(Guid.NewGuid(), Guid.NewGuid(), project, "Diagram", member));
         Assert.Equal(leader, Assert.Single(notifications).UserId);
     }
+    [Fact, Trait("BR", "BR-34")]
+    public async Task HandleAsync_ReviewSubmittedByLecturer_DoesNotNotifyActor()
+    {
+        await Send(Handler(), new ReviewSubmitted(Guid.NewGuid(), project, lecturer));
+        Assert.Empty(notifications);
+    }
+    [Fact, Trait("BR", "BR-34")]
+    public async Task HandleAsync_ReviewDecidedByMember_ExcludesActorFromRecipients()
+    {
+        await Send(Handler(), new ReviewDecided(Guid.NewGuid(), project, "Approved", null, member));
+        Assert.Equal(leader, Assert.Single(notifications).UserId);
+    }
     [Fact]
     public async Task HandleAsync_ProjectCreated_UpsertsLeader()
     {
