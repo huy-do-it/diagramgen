@@ -1,3 +1,15 @@
-# Bảo (B-05) — client (React build + nginx :3000, /api → gateway:8080)
-# Sẽ hoàn thiện ở B-05.
-services: {}
+# Bảo (B-05) — React SPA build tĩnh, phục vụ bằng nginx :3000; /api/* chuyển tới gateway:8080.
+services:
+  client:
+    build:
+      context: ../../client
+    image: umlforge/client:dev
+    ports:
+      - "3000:80"
+    # Không cần depends_on gateway: nginx resolve "gateway" lúc có request, nên client vẫn chạy khi
+    # gateway chưa lên (gọi /api trả 502). Khi ghép (I-02) có thể thêm depends_on gateway service_healthy.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6

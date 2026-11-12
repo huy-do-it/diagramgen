@@ -1,0 +1,14 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000010",
+  "type": "ProjectCreated",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:10:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000002",
+  "producer": "workspace",
+  "payload": {
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "name": "CampusEats",
+    "ownerId": "c0000000-0000-0000-0000-000000000001",
+    "actorUserId": "c0000000-0000-0000-0000-000000000001"
+  }
+}

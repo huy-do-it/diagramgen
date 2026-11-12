@@ -1,0 +1,17 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000022",
+  "type": "RenderFailed",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:22:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000004",
+  "producer": "render",
+  "payload": {
+    "jobId": "30000000-0000-0000-0000-000000000002",
+    "diagramId": "f0000000-0000-0000-0000-000000000002",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "version": 1,
+    "title": "CampusEats - Place Order",
+    "error": "PlantUML timeout sau 30 s (BR-27)",
+    "requestedBy": "c0000000-0000-0000-0000-000000000002"
+  }
+}

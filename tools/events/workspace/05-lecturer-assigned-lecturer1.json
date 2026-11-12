@@ -1,0 +1,15 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000014",
+  "type": "LecturerAssigned",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:14:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000002",
+  "producer": "workspace",
+  "payload": {
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "projectName": "CampusEats",
+    "lecturerId": "b0000000-0000-0000-0000-000000000001",
+    "previousLecturerId": null,
+    "actorUserId": "c0000000-0000-0000-0000-000000000001"
+  }
+}

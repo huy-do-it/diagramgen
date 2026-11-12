@@ -1,0 +1,14 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000003",
+  "type": "UserRegistered",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:03:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000001",
+  "producer": "identity",
+  "payload": {
+    "userId": "b0000000-0000-0000-0000-000000000002",
+    "username": "lecturer2",
+    "fullName": "Giảng viên Hai",
+    "role": "Lecturer"
+  }
+}
