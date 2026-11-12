@@ -15,7 +15,7 @@
 | Huy | ⬜ H-01 · ⬜ H-02 | ⬜ H-03 · ⬜ H-04 | ⬜ H-05 · ⬜ H-06 | ⬜ H-07 | 0/7 |
 | Thiện | ⬜ T-01 · ⬜ T-02 | ⬜ T-03 · ⬜ T-04 | ⬜ T-05 · ⬜ T-06 | ⬜ T-07 | 0/7 |
 | Minh | 🟨 M-01 · 🟨 M-02 | ⬜ M-03 · ⬜ M-04 | ⬜ M-05 · ⬜ M-06 | ⬜ M-07 | 0/7 |
-| Bảo | ✅ B-01 · ✅ B-02 | ⬜ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 2/7 |
+| Bảo | ✅ B-01 · ✅ B-02 | ✅ B-03 · ⬜ B-04 | ⬜ B-05 · ⬜ B-06 | ⬜ B-07 | 3/7 |
 | Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
@@ -32,7 +32,8 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 | 12/11/2026 | **B-01** BuildingBlocks Auth + Web + Jobs | Bảo | `83667c4` — kiểm bằng API mẫu: ProblemDetails, JWT, chạy job tay |
 | 12/11/2026 | **B-01/B-02** BuildingBlocks Outbox + EventBus (Redis Streams, Inbox, retry, DLQ) | Bảo | `9f65a86` — kiểm 9/9 kịch bản với Redis 7 thật |
 | 12/11/2026 | **B-01** `make-dev-token.ps1`, khung client v2 (proxy Vite, `shared/api.ts`, auth, layout, `routes.tsx` mẫu), compose `include` + 9 file mẫu | Bảo | `8dcf665` — kiểm build client, proxy, đăng nhập/đăng xuất trên trình duyệt, `docker compose config` |
-| 12/11/2026 | **B-02** Integration test Testcontainers (Redis 7 + SQL Server 2022): 7 test EventBus/Outbox + 4 test ScheduledJob | Bảo | 11/11 xanh, chạy 3 lần ổn định; cần Docker khi chạy `dotnet test` |
+| 12/11/2026 | **B-02** Integration test Testcontainers (Redis 7 + SQL Server 2022): 7 test EventBus/Outbox + 4 test ScheduledJob | Bảo | `c717cfa` — 11/11 xanh, chạy 3 lần ổn định; cần Docker khi chạy `dotnet test` |
+| 12/11/2026 | **B-03** DiagramEngine: chép model, parser, `PlantUmlGenerator` v1; tách luật UML (BR-18…25) + gợi ý quan hệ sang `Validators/`; chép test v1 | Bảo | 53/53 test v1 xanh; service chạy :5006 (h2c). Không chép `DiagramValidators.cs` v1 (validator DTO → thuộc Diagram service) |
 | 12/11/2026 | M-01 final source review + Git delivery | Minh | Commit `590674c`, [PR #1](https://github.com/huy-do-it/diagramgen/pull/1) vào develop, MERGED tại 5b7dc6c. Fresh build0warning/error, unit43/43 và SQL/PlantUML10/10 PASS; chưa nhận Done toàn DoD. |
 | 12/11/2026 | M-02 Notification DB/API review + delivery | Minh | Commit1d414f1, [PR #2](https://github.com/huy-do-it/diagramgen/pull/2) MERGED vào develop tại5ebea98; unit19/19 và44real API/SQL assertions PASS. Resolve PR2: Render43/43 + Notification19/19 PASS; chưa nhận acceptance tích hợp B-01/Identity/Gateway. |
 
@@ -157,10 +158,10 @@ Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
 ### 12/11/2026 — Bảo
 - Xong: B-01 (4 commit: khung repo + Contracts · Auth/Web/Jobs · Outbox/EventBus · tools/client/compose). Phần code chính của B-02 (Outbox, EventBus, ScheduledJobBase) cũng đã nằm trong B-01.
-- Xong: B-02 (integration test Testcontainers, 11/11 xanh).
+- Xong: B-02 (integration test Testcontainers, 11/11 xanh), B-03 (DiagramEngine: generator + luật UML từ v1, 53/53 test xanh).
 - Bug mới: không. Lệch tài liệu → mục 6 Q8.
 - Bị chặn bởi: không.
-- Tiếp theo: B-03 DiagramEngine (chép generator/validator v1).
+- Tiếp theo: B-04 DiagramEngine 4 RPC + interceptor + health + reflection.
 
 ---
 
