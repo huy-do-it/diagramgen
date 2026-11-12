@@ -4,7 +4,7 @@
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
 **Cập nhật lần cuối:** 12/11/2026 — Bảo
-**Giai đoạn hiện tại:** Trước ngày 1 — chưa bắt đầu code (đang chốt tài liệu). Kế hoạch 4 ngày, xem TASKS.md §0.2
+**Giai đoạn hiện tại:** Ngày 1 — B-01 xong phần code (Contracts + BuildingBlocks + tools + khung client + compose), chờ PR/review. Kế hoạch 4 ngày, xem TASKS.md §0.2
 
 ---
 

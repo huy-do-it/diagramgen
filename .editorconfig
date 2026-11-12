@@ -28,3 +28,6 @@ dotnet_naming_style.underscore_camel.required_prefix = _
 
 [**/Migrations/*.cs]
 generated_code = true
+
+[*.ps1]
+charset = utf-8-bom
