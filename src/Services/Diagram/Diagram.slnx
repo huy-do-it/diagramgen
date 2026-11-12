@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Diagram.API/Diagram.API.csproj" />
+  <Project Path="Diagram.Repositories/Diagram.Repositories.csproj" />
+  <Project Path="Diagram.Service/Diagram.Service.csproj" />
+  <Project Path="Diagram.Tests/Diagram.Tests.csproj" />
+</Solution>
