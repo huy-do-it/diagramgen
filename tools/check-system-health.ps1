@@ -51,7 +51,8 @@ try {
 
 # Kiểm tra SQL Server Ping
 try {
-    $sqlPing = docker exec umlforge-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Your_password123" -C -Q "SELECT @@VERSION;" 2>$null
+    # Mật khẩu đọc từ biến môi trường MSSQL_SA_PASSWORD bên trong container — không ghi secret trong script
+    $sqlPing = docker exec umlforge-sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT @@VERSION;"' 2>$null
     if ($sqlPing -match "Microsoft SQL Server") {
         Write-Host "  [OK] SQL Server 2022: Hoạt động bình thường" -ForegroundColor Green
     } else {
