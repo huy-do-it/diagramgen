@@ -40,6 +40,11 @@ public class UpdateDiagramRequest
     public string ModelJson { get; set; } = string.Empty;
 }
 
+public class ValidateDiagramRequest
+{
+    public string? ModelJson { get; set; }
+}
+
 public class DiagramSummaryResponse
 {
     public Guid Id { get; set; }

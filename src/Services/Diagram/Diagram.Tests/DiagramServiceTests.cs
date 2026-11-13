@@ -9,9 +9,11 @@ using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Context;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
+using UMLForge.Diagram.Repositories.Interfaces;
 using UMLForge.Diagram.Repositories.Repositories;
 using UMLForge.Diagram.Service.DTOs;
 using UMLForge.Diagram.Service.Interfaces;
+using UMLForge.Diagram.Service.Models.Validation;
 using UMLForge.Diagram.Service.Services;
 using Xunit;
 
@@ -43,6 +45,7 @@ public class DiagramServiceTests
     private readonly IOutbox _outbox;
     private readonly ReviewRepository _reviewRepository;
     private readonly Mock<ICurrentUser> _currentUserMock;
+    private readonly Mock<IDiagramEngineClient> _engineClientMock;
     private readonly DiagramService _service;
 
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -70,12 +73,16 @@ public class DiagramServiceTests
         _outbox = new TestOutbox(_dbContext);
         _reviewRepository = new ReviewRepository(_dbContext);
         _currentUserMock = new Mock<ICurrentUser>();
+        _engineClientMock = new Mock<IDiagramEngineClient>();
+
+        _engineClientMock.Setup(c => c.ValidateDiagramAsync(It.IsAny<DiagramType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiagramValidationResult { IsValid = true, Errors = new List<string>(), Warnings = new List<string>() });
 
         _currentUserMock.Setup(u => u.UserId).Returns(_testUserId);
         _currentUserMock.Setup(u => u.Role).Returns("Student");
         _currentUserMock.Setup(u => u.Username).Returns("student1");
 
-        _service = new DiagramService(_diagramRepository, _versionRepository, _memberAccessRepository, _currentUserMock.Object, _outbox, _reviewRepository);
+        _service = new DiagramService(_diagramRepository, _versionRepository, _memberAccessRepository, _currentUserMock.Object, _outbox, _reviewRepository, _engineClientMock.Object);
     }
 
     [Fact]
@@ -989,5 +996,167 @@ public class DiagramServiceTests
             _service.RestoreVersionAsync(created.Id, 1));
         Assert.Equal(409, ex.Status);
         Assert.Equal("BR-13", ex.Code);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-16")]
+    public async Task UpdateDiagram_DbUpdateConcurrencyException_Throws409BR16()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original V1",
+            ModelJson = ValidUseCaseJson
+        });
+
+        var diagramMock = new Mock<IDiagramRepository>();
+        diagramMock.Setup(r => r.GetByIdAsync(created.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await _diagramRepository.GetByIdAsync(created.Id));
+        diagramMock.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("Concurrency conflict"));
+
+        var service = new DiagramService(
+            diagramMock.Object,
+            _versionRepository,
+            _memberAccessRepository,
+            _currentUserMock.Object,
+            _outbox,
+            _reviewRepository,
+            _engineClientMock.Object);
+
+        var updateRequest = new UpdateDiagramRequest
+        {
+            Title = "Updated Title",
+            ModelJson = ValidUseCaseJson
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.UpdateDiagramAsync(created.Id, updateRequest, created.ETag));
+        Assert.Equal(409, ex.Status);
+        Assert.Equal("BR-16", ex.Code);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-31")]
+    public async Task RestoreVersion_ProjectWithApprovedReview_ReturnsNeedsResubmitTrue()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Leader
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original V1",
+            ModelJson = ValidUseCaseJson
+        });
+
+        // Add Approved Review for this project
+        await _reviewRepository.AddAsync(new Review
+        {
+            Id = Guid.NewGuid(),
+            ProjectId = _testProjectId,
+            Status = ReviewStatus.Approved,
+            SubmittedBy = _testUserId,
+            SubmittedAt = DateTime.UtcNow,
+            SnapshotJson = "[]"
+        });
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.RestoreVersionAsync(created.Id, 1);
+
+        // Assert
+        Assert.True(result.NeedsResubmit);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-18")]
+    public async Task CreateDiagram_DiagramEngineReturnsWarnings_IncludesWarningsInResponse()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        _engineClientMock.Setup(c => c.ValidateDiagramAsync(It.IsAny<DiagramType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiagramValidationResult
+            {
+                IsValid = true,
+                Warnings = new List<string> { "Consider adding more actors." }
+            });
+
+        // Act
+        var result = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "With Warnings",
+            ModelJson = ValidUseCaseJson
+        });
+
+        // Assert
+        Assert.Single(result.Warnings);
+        Assert.Equal("Consider adding more actors.", result.Warnings[0]);
+    }
+
+    [Fact]
+    public async Task ValidateDiagram_WithDraftModelJson_ValidatesDraftJson()
+    {
+        // Arrange
+        await _memberAccessRepository.AddAsync(new MemberAccess
+        {
+            ProjectId = _testProjectId,
+            UserId = _testUserId,
+            Role = ProjectRole.Member
+        });
+        await _memberAccessRepository.SaveChangesAsync();
+
+        var created = await _service.CreateDiagramAsync(new CreateDiagramRequest
+        {
+            ProjectId = _testProjectId,
+            Type = DiagramType.UseCase,
+            Title = "Original",
+            ModelJson = ValidUseCaseJson
+        });
+
+        var draftJson = @"{
+  ""systemBoundary"": ""DraftSystem"",
+  ""actors"": [""Student""],
+  ""useCases"": [""DraftUC""],
+  ""relations"": [{ ""from"": ""Student"", ""to"": ""DraftUC"", ""type"": ""association"" }]
+}";
+        string? validatedJson = null;
+        _engineClientMock.Setup(c => c.ValidateDiagramAsync(It.IsAny<DiagramType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<DiagramType, string, CancellationToken>((_, json, _) => validatedJson = json)
+            .ReturnsAsync(new DiagramValidationResult { IsValid = true });
+
+        // Act
+        var result = await _service.ValidateDiagramAsync(created.Id, draftJson);
+
+        // Assert
+        Assert.True(result.IsValid);
+        Assert.Equal(draftJson, validatedJson);
     }
 }

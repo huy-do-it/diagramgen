@@ -199,7 +199,7 @@ public class DiagramService : IDiagramService
         await _diagramRepository.SaveChangesAsync(cancellationToken);
 
         var etag = Convert.ToBase64String(diagram.RowVersion);
-        return MapToDetail(diagram, etag);
+        return MapToDetail(diagram, etag, warnings: umlValidation.Warnings);
     }
 
     public async Task<DiagramDetailResponse> UpdateDiagramAsync(
@@ -279,7 +279,17 @@ public class DiagramService : IDiagramService
 
         _diagramRepository.Update(diagram);
         await _versionRepository.AddAsync(versionSnapshot, cancellationToken);
-        await _diagramRepository.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _diagramRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessRuleException(
+                "BR-16",
+                "Precondition Failed: Concurrency conflict. Diagram has been modified by another process. Please reload.",
+                409);
+        }
 
         // BR-31: Khi sửa diagram thuộc project có review mới nhất Approved, trả cờ needsResubmit = true
         var needsResubmit = false;
@@ -293,10 +303,13 @@ public class DiagramService : IDiagramService
         }
 
         var etag = Convert.ToBase64String(diagram.RowVersion);
-        return MapToDetail(diagram, etag, needsResubmit);
+        return MapToDetail(diagram, etag, needsResubmit, warnings: umlValidation.Warnings);
     }
 
-    public async Task<DiagramValidationResult> ValidateDiagramAsync(Guid diagramId, CancellationToken cancellationToken = default)
+    public async Task<DiagramValidationResult> ValidateDiagramAsync(
+        Guid diagramId,
+        string? draftModelJson = null,
+        CancellationToken cancellationToken = default)
     {
         var diagram = await _diagramRepository.GetByIdAsync(diagramId, cancellationToken);
         if (diagram == null)
@@ -305,7 +318,11 @@ public class DiagramService : IDiagramService
         }
 
         await EnsureProjectAccessAsync(diagram.ProjectId, allowLecturer: true, cancellationToken);
-        return await _engineClient.ValidateDiagramAsync(diagram.Type, diagram.ModelJson, cancellationToken);
+
+        var jsonToValidate = string.IsNullOrWhiteSpace(draftModelJson) ? diagram.ModelJson : draftModelJson;
+        ValidateModelJson(diagram.Type, jsonToValidate);
+
+        return await _engineClient.ValidateDiagramAsync(diagram.Type, jsonToValidate, cancellationToken);
     }
 
     public async Task<IReadOnlyList<RelationSuggestion>> SuggestRelationsAsync(Guid diagramId, CancellationToken cancellationToken = default)
@@ -515,8 +532,19 @@ public class DiagramService : IDiagramService
         await _versionRepository.AddAsync(restoredSnapshot, cancellationToken);
         await _diagramRepository.SaveChangesAsync(cancellationToken);
 
+        // BR-31: Khi khôi phục diagram thuộc project có review mới nhất Approved, trả cờ needsResubmit = true
+        var needsResubmit = false;
+        if (_reviewRepository != null)
+        {
+            var latestReview = await _reviewRepository.GetLatestReviewByProjectIdAsync(diagram.ProjectId, cancellationToken);
+            if (latestReview != null && latestReview.Status == ReviewStatus.Approved)
+            {
+                needsResubmit = true;
+            }
+        }
+
         var etag = Convert.ToBase64String(diagram.RowVersion);
-        return MapToDetail(diagram, etag);
+        return MapToDetail(diagram, etag, needsResubmit);
     }
 
     private async Task EnsureProjectAccessAsync(Guid projectId, bool allowLecturer, CancellationToken cancellationToken)
@@ -577,7 +605,11 @@ public class DiagramService : IDiagramService
         };
     }
 
-    private static DiagramDetailResponse MapToDetail(DiagramEntity diagram, string etag, bool needsResubmit = false)
+    private static DiagramDetailResponse MapToDetail(
+        DiagramEntity diagram,
+        string etag,
+        bool needsResubmit = false,
+        IEnumerable<string>? warnings = null)
     {
         return new DiagramDetailResponse
         {
@@ -595,7 +627,8 @@ public class DiagramService : IDiagramService
             RenderedAt = diagram.RenderedAt,
             LastError = diagram.LastError,
             ETag = etag,
-            NeedsResubmit = needsResubmit
+            NeedsResubmit = needsResubmit,
+            Warnings = warnings?.ToList() ?? new List<string>()
         };
     }
 }

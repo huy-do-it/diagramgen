@@ -202,6 +202,12 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
         </div>
       )}
 
+      {diagram.needsResubmit && (
+        <div className="notice warning" style={{ marginBottom: '16px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '12px 16px', borderRadius: '6px' }}>
+          <strong>⚠️ Chú ý:</strong> Sơ đồ này đã được chỉnh sửa sau khi đồ án được phê duyệt. Trưởng nhóm cần gửi yêu cầu thẩm định lại (Review) sau khi hoàn tất các thay đổi.
+        </div>
+      )}
+
       {/* Main Canvas Area */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px' }}>
         {/* SVG Viewport */}

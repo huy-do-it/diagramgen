@@ -73,7 +73,7 @@ public class DiagramExportService : IDiagramExportService
                     // 1. JSON entry
                     if (!string.IsNullOrWhiteSpace(diagram.ModelJson))
                     {
-                        var jsonEntry = archive.CreateEntry($"{baseTitle}.json");
+                        var jsonEntry = archive.CreateEntry($"{baseTitle}.json", CompressionLevel.Fastest);
                         using var entryStream = jsonEntry.Open();
                         var bytes = Encoding.UTF8.GetBytes(diagram.ModelJson);
                         entryStream.Write(bytes, 0, bytes.Length);
@@ -82,7 +82,7 @@ public class DiagramExportService : IDiagramExportService
                     // 2. PUML entry
                     if (!string.IsNullOrWhiteSpace(diagram.PlantUml))
                     {
-                        var pumlEntry = archive.CreateEntry($"{baseTitle}.puml");
+                        var pumlEntry = archive.CreateEntry($"{baseTitle}.puml", CompressionLevel.Fastest);
                         using var entryStream = pumlEntry.Open();
                         var bytes = Encoding.UTF8.GetBytes(diagram.PlantUml);
                         entryStream.Write(bytes, 0, bytes.Length);
@@ -91,7 +91,7 @@ public class DiagramExportService : IDiagramExportService
                     // 3. SVG entry
                     if (!string.IsNullOrWhiteSpace(diagram.SvgXml))
                     {
-                        var svgEntry = archive.CreateEntry($"{baseTitle}.svg");
+                        var svgEntry = archive.CreateEntry($"{baseTitle}.svg", CompressionLevel.Fastest);
                         using var entryStream = svgEntry.Open();
                         var bytes = Encoding.UTF8.GetBytes(diagram.SvgXml);
                         entryStream.Write(bytes, 0, bytes.Length);

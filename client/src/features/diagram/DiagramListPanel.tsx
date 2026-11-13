@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ApiError } from '../../shared/api';
 import { DiagramTypeLabels } from './types';
 import type { DiagramSummary, DiagramStatus } from './types';
 import { diagramApi } from './diagramApi';
@@ -44,7 +45,11 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
       setTotalPages(res.totalPages);
       setTotalItems(res.totalItems);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh sách sơ đồ.');
+      if (err instanceof ApiError && err.status === 403) {
+        setError('Bạn chưa có quyền truy cập đồ án này hoặc dữ liệu quyền đang được đồng bộ từ Workspace. Vui lòng thử lại sau giây lát nếu bạn vừa được thêm vào nhóm.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Không thể tải danh sách sơ đồ.');
+      }
     } finally {
       setLoading(false);
     }
