@@ -1,7 +1,14 @@
+using System.Net;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using UMLForge.BuildingBlocks.Jobs;
+using UMLForge.Contracts.Events;
 
 namespace UMLForge.BuildingBlocks.Tests;
 
@@ -90,5 +97,40 @@ public sealed class ScheduledJobTests
         services.AddScheduledJob<CountingJob>();
 
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(CountingJob));
+    }
+
+    [Fact]
+    public async Task MapJobTriggerEndpoint_NoJobRegistered_StartsAndReturnsEmptyList()
+    {
+        // Service không có job nào (như Diagram) vẫn phải khởi động được; trước đây crash lúc StartAsync
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Logging.ClearProviders();
+        builder.Services.AddAuthentication();
+        builder.Services.AddAuthorization();
+        await using var app = builder.Build();
+
+        // Giả lập Admin đã đăng nhập để đi qua RequireRole(Admin) mà không cần JWT
+        app.Use((context, next) =>
+        {
+            context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, UserRoles.Admin)], "test"));
+            return next();
+        });
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapJobTriggerEndpoint("test");
+
+        await app.StartAsync();
+        var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
+        using var client = new HttpClient { BaseAddress = new Uri(address) };
+
+        var list = await client.GetAsync("/api/admin/test/jobs");
+        var run = await client.PostAsync("/api/admin/test/jobs/any-job/run", null);
+
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        Assert.Equal("[]", await list.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.NotFound, run.StatusCode);
+        Assert.Contains("JOB_NOT_FOUND", await run.Content.ReadAsStringAsync());
+        await app.StopAsync();
     }
 }
