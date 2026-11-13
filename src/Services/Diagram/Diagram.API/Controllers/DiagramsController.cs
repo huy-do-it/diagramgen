@@ -31,6 +31,7 @@ public class DiagramsController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<DiagramSummaryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetDiagrams([FromQuery] DiagramQueryParameters query, CancellationToken cancellationToken)
@@ -63,6 +64,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Create([FromBody] CreateDiagramRequest request, CancellationToken cancellationToken)
     {
         var created = await _diagramService.CreateDiagramAsync(request, cancellationToken);
@@ -86,6 +88,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateDiagramRequest request,
@@ -240,15 +243,21 @@ public class DiagramsController : ControllerBase
 
     /// <summary>
     /// Validates a diagram's model against semantic UML rules via DiagramEngine.
+    /// Can validate uncommitted draft ModelJson if provided in request body.
     /// </summary>
     [HttpPost("{id:guid}/validate")]
     [ProducesResponseType(typeof(DiagramValidationResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Validate(Guid id, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Validate(
+        Guid id,
+        [FromBody] ValidateDiagramRequest? request,
+        CancellationToken cancellationToken)
     {
-        var result = await _diagramService.ValidateDiagramAsync(id, cancellationToken);
+        var result = await _diagramService.ValidateDiagramAsync(id, request?.ModelJson, cancellationToken);
         return Ok(result);
     }
 
@@ -260,6 +269,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> GetSuggestions(Guid id, CancellationToken cancellationToken)
     {
         var result = await _diagramService.SuggestRelationsAsync(id, cancellationToken);
@@ -274,6 +284,7 @@ public class DiagramsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> ValidateProject(
         [FromQuery] Guid projectId,
         CancellationToken cancellationToken)

@@ -36,6 +36,8 @@ export interface DiagramDetail extends DiagramSummary {
   plantUml?: string | null;
   svgXml?: string | null;
   eTag?: string | null;
+  needsResubmit?: boolean;
+  warnings?: string[];
 }
 
 export interface DiagramVersionSummary {

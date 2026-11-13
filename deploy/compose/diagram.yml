@@ -5,16 +5,16 @@ services:
       dockerfile: Services/Diagram/Diagram.API/Dockerfile
     container_name: umlforge-diagram
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DiagramDb: Server=sqlserver,1433;Database=DiagramDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
-      ConnectionStrings__Default: Server=sqlserver,1433;Database=DiagramDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
-      ConnectionStrings__Redis: ${REDIS_URL}
-      REDIS_URL: ${REDIS_URL}
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-      DiagramEngine__Url: ${DIAGRAM_ENGINE_URL}
-      DIAGRAM_ENGINE_URL: ${DIAGRAM_ENGINE_URL}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__DiagramDb: Server=sqlserver,1433;Database=DiagramDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__Default: Server=sqlserver,1433;Database=DiagramDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__Redis: ${REDIS_URL:-redis:6379}
+      REDIS_URL: ${REDIS_URL:-redis:6379}
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER:-umlforge}
+      Jwt__Audience: ${JWT_AUDIENCE:-umlforge-client}
+      DiagramEngine__Url: ${DIAGRAM_ENGINE_URL:-http://diagram-engine:8080}
+      DiagramEngine__UseFake: "false"
     ports:
       - "5003:8080"
     depends_on:

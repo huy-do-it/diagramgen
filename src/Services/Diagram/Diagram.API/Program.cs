@@ -1,3 +1,5 @@
+using Grpc.Core;
+using Grpc.Net.Client.Configuration;
 using Microsoft.EntityFrameworkCore;
 using UMLForge.BuildingBlocks.EventBus;
 using UMLForge.BuildingBlocks.Jobs;
@@ -37,6 +39,11 @@ builder.Services.AddScoped<IMemberAccessService, MemberAccessService>();
 
 // DiagramEngine gRPC Client (T-05)
 var useFakeEngine = builder.Configuration.GetValue<bool>("DiagramEngine:UseFake");
+if (useFakeEngine && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("DiagramEngine:UseFake is allowed only in Development.");
+}
+
 if (useFakeEngine)
 {
     builder.Services.AddScoped<IDiagramEngineClient, FakeDiagramEngineClient>();
@@ -50,6 +57,24 @@ else
     builder.Services.AddGrpcClient<DiagramEngineService.DiagramEngineServiceClient>(o =>
     {
         o.Address = new Uri(engineUrl);
+    })
+    .ConfigureChannel(o => o.ServiceConfig = new ServiceConfig
+    {
+        MethodConfigs =
+        {
+            new MethodConfig
+            {
+                Names = { MethodName.Default },
+                RetryPolicy = new RetryPolicy
+                {
+                    MaxAttempts = 3,
+                    InitialBackoff = TimeSpan.FromMilliseconds(100),
+                    MaxBackoff = TimeSpan.FromSeconds(1),
+                    BackoffMultiplier = 2,
+                    RetryableStatusCodes = { StatusCode.Unavailable }
+                }
+            }
+        }
     });
     builder.Services.AddScoped<IDiagramEngineClient, GrpcDiagramEngineClient>();
 }

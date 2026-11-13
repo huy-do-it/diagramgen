@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UMLForge.Diagram.Service.Interfaces;
 
 namespace UMLForge.Diagram.API.Controllers;
 
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/admin/diagram/dev/member-access")]
 public class DevMemberAccessController : ControllerBase
