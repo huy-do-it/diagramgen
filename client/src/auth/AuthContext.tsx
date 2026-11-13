@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, apiRequest, setUnauthorizedHandler } from '../shared/api';
-import { clearSession, readSession, saveSession } from './session';
+import { ApiError, apiRequest, setUnauthorizedHandler, getOrQueueRefreshSession } from '../shared/api';
+import { clearSession, readSession, saveSession, getSessionVersion, subscribeSession } from './session';
 import type { Session } from './session';
 
 export type UserRole = 'Student' | 'Lecturer' | 'Admin';
@@ -49,38 +49,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const controller = new AbortController();
     setUnauthorizedHandler(() => endSession(expiredMessage));
+    const unsubscribe = subscribeSession(setSession);
     const saved = readSession();
+    const version = getSessionVersion();
     if (!saved) {
-      clearSession();
       setLoading(false);
-    } else if (saved.expiresAt <= Date.now()) {
-      endSession(expiredMessage);
     } else {
       apiRequest<User>('/users/me', { signal: controller.signal }).then(data => {
-        if (!controller.signal.aborted && readSession()?.accessToken === saved.accessToken) {
+        if (!controller.signal.aborted && getSessionVersion() === version) {
           setUser(data);
-          setSession(saved);
+          setSession(readSession());
           setLoading(false);
         }
       }).catch((error: unknown) => {
-        const current = readSession();
-        if (!controller.signal.aborted && (!current || current.accessToken === saved.accessToken)) {
+        if (!controller.signal.aborted && getSessionVersion() === version) {
           endSession(error instanceof ApiError && error.status === 401 ? expiredMessage
             : 'Không kiểm tra được phiên đăng nhập. Kiểm tra mạng rồi đăng nhập lại.');
         }
       });
     }
-    return () => { controller.abort(); setUnauthorizedHandler(undefined); };
+    return () => { controller.abort(); unsubscribe(); setUnauthorizedHandler(undefined); };
   }, [endSession]);
 
   useEffect(() => {
     if (!session) return;
-    const expire = () => {
+    const version = getSessionVersion();
+    const triggerRefreshOrExpire = async () => {
       const current = readSession();
-      if (!current || current.accessToken === session.accessToken) endSession(expiredMessage);
+      if (getSessionVersion() !== version || current?.accessToken !== session.accessToken) return;
+      const refreshed = await getOrQueueRefreshSession();
+      if (!refreshed && getSessionVersion() === version && readSession()?.accessToken === session.accessToken) {
+        endSession(expiredMessage);
+      }
     };
-    const checkExpiry = () => { if (Date.now() >= session.expiresAt) expire(); };
-    const timer = window.setTimeout(expire, Math.max(0, session.expiresAt - Date.now()));
+    const checkExpiry = () => {
+      if (Date.now() >= session.expiresAt) void triggerRefreshOrExpire();
+    };
+    const timer = window.setTimeout(triggerRefreshOrExpire, Math.max(0, session.expiresAt - Date.now()));
     window.addEventListener('focus', checkExpiry);
     document.addEventListener('visibilitychange', checkExpiry);
     return () => {
@@ -99,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(saved);
     setUser(data.user);
     setNotice(null);
+    setLoading(false);
   }
 
   return <AuthContext.Provider value={{ user, loading, notice, signIn, signOut: () => endSession() }}>

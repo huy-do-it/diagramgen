@@ -5,6 +5,17 @@ export interface Session {
 }
 
 const SESSION_KEY = 'umlforge.session.v2';
+let sessionVersion = 0;
+const listeners = new Set<(session: Session | null) => void>();
+
+export const getSessionVersion = () => sessionVersion;
+export function subscribeSession(listener: (session: Session | null) => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+function notifySession(session: Session | null) {
+  listeners.forEach(listener => listener(session));
+}
 
 export function readSession(): Session | null {
   try {
@@ -22,7 +33,7 @@ export function readSession(): Session | null {
   }
 }
 
-export function saveSession(accessToken: string, refreshToken: string, expiresIn: number): Session {
+export function saveSession(accessToken: string, refreshToken: string, expiresIn: number, isRefresh = false): Session {
   let expiresAt: number;
   try {
     // exp chỉ dùng để báo hết phiên phía client; API vẫn là nơi kiểm tra JWT
@@ -39,9 +50,13 @@ export function saveSession(accessToken: string, refreshToken: string, expiresIn
   } catch {
     throw new Error('Trình duyệt không lưu được phiên đăng nhập. Hãy cho phép lưu trữ dữ liệu trang rồi thử lại.');
   }
+  if (!isRefresh) sessionVersion++;
+  notifySession(session);
   return session;
 }
 
 export function clearSession() {
+  sessionVersion++;
   try { sessionStorage.removeItem(SESSION_KEY); } catch { /* Storage có thể bị tắt. */ }
+  notifySession(null);
 }
