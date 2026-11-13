@@ -1,33 +1,25 @@
-# Huy (H-07) — service "gateway" (YARP) · port host 5000 · không có database
-# Khi làm Dockerfile: bỏ comment khối mẫu dưới, sửa cho đúng, xóa dòng "services: {}".
-# Lưu ý:
-#  - build.context là ../../src (đường dẫn tính từ thư mục deploy/compose/ của file này).
-#  - Image mcr.microsoft.com/dotnet/aspnet:8.0 KHÔNG có curl → Dockerfile cần:
-#      RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-#  - Biến ${...} lấy từ deploy/.env (copy từ deploy/.env.example). Không ghi secret thật vào file này.
-#  - Không khai báo networks: mọi service dùng chung network mặc định của project.
-#
-# services:
-#   gateway:
-#     build:
-#       context: ../../src
-#       dockerfile: Gateway/UMLForge.Gateway/Dockerfile
-#     environment:
-#       ASPNETCORE_ENVIRONMENT: Development
-#       Jwt__Key: ${JWT_KEY}
-#       Jwt__Issuer: ${JWT_ISSUER}
-#       Jwt__Audience: ${JWT_AUDIENCE}
-#     ports:
-#       - "5000:8080"
-#     depends_on:
-#       identity: { condition: service_healthy }
-#       workspace: { condition: service_healthy }
-#       diagram: { condition: service_healthy }
-#       render: { condition: service_healthy }
-#       notification: { condition: service_healthy }
-#     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-#       interval: 10s
-#       timeout: 3s
-#       retries: 12
-services: {}
+# Huy (H-05, H-07) — service "gateway" (YARP) · port host 5000 · không có database
+services:
+  gateway:
+    build:
+      context: ../../src
+      dockerfile: Gateway/UMLForge.Gateway/Dockerfile
+    container_name: umlforge-gateway
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+    ports:
+      - "5000:8080"
+    depends_on:
+      identity:
+        condition: service_healthy
+      workspace:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
