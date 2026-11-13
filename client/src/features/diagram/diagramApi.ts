@@ -156,7 +156,8 @@ export const diagramApi = {
     });
   },
 
-  exportZipUrl(projectId: string): string {
-    return `/api/diagrams/export?projectId=${encodeURIComponent(projectId)}`;
+  async exportZip(projectId: string): Promise<Blob> {
+    const response = await apiFetch(`/diagrams/export?projectId=${encodeURIComponent(projectId)}`);
+    return response.blob();
   },
 };

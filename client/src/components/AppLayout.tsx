@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import type { UserRole } from '../auth/AuthContext';
 import { Brand } from './Brand';
 import { NotificationBell } from '../features/notification/NotificationBell';
+import { ToastProvider } from '../shared/Toast';
 
 const roleLabels: Record<UserRole, string> = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Admin: 'Quản trị viên' };
 
@@ -42,7 +43,7 @@ export function AppLayout() {
           <button className="button button-secondary" onClick={signOut}>Đăng xuất</button>
         </div>
       </header>
-      <main id="main-content" className="main-content"><Outlet /></main>
+      <main id="main-content" className="main-content"><ToastProvider><Outlet /></ToastProvider></main>
       <footer className="workspace-footer">UMLForge <span>Model · Validate · Render</span></footer>
     </div>
   </div>;

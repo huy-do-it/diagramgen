@@ -1,3 +1,4 @@
+import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ApiError } from '../../shared/api';
 import { DiagramTypeLabels } from './types';
@@ -17,6 +18,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
   onCreateNew,
   canEdit = true,
 }) => {
+  const notify = useToast();
   const [diagrams, setDiagrams] = useState<DiagramSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +65,10 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
     e.stopPropagation();
     try {
       await diagramApi.requestRender(id);
+      notify('Đã gửi yêu cầu render.');
       fetchDiagrams();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi gửi yêu cầu render.');
+      notify(err instanceof Error ? err.message : 'Lỗi khi gửi yêu cầu render.', 'error');
     }
   };
 
@@ -74,9 +77,10 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
     if (!window.confirm('Bạn có chắc muốn xóa sơ đồ này không?')) return;
     try {
       await diagramApi.deleteDiagram(id);
+      notify('Đã xóa sơ đồ.');
       fetchDiagrams();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi xóa sơ đồ.');
+      notify(err instanceof Error ? err.message : 'Lỗi khi xóa sơ đồ.', 'error');
     }
   };
 

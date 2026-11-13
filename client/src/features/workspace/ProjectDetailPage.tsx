@@ -1,12 +1,22 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../shared/api';
 import { workspaceApi } from './workspaceApi';
 import { InviteMemberModal } from './InviteMemberModal';
+import { DiagramListPanel } from '../diagram/DiagramListPanel';
+import { ReviewPanel } from '../diagram/ReviewPanel';
+import { CreateDiagramModal } from '../diagram/CreateDiagramModal';
 import type { ProjectDetail, ProjectMemberItem, UserDirectoryItem } from './types';
 
 export function ProjectDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  return <ProjectDetailContent key={id} />;
+}
+
+function ProjectDetailContent() {
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -34,11 +44,14 @@ export function ProjectDetailPage() {
   const [selectedLecturerId, setSelectedLecturerId] = useState('');
   const [loadingLecturers, setLoadingLecturers] = useState(false);
 
+  // Create Diagram Modal State
+  const [showCreateDiagramModal, setShowCreateDiagramModal] = useState(false);
   const fetchProject = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
       const data = await workspaceApi.getProject(id);
+      if (!mounted.current) return;
       setProject(data.project);
       setEtag(data.etag);
       setEditName(data.project.name);
@@ -61,6 +74,7 @@ export function ProjectDetailPage() {
   const currentMember = project?.members.find(m => m.userId === currentUser?.id);
   const isLeader = currentMember?.role === 'Leader';
   const isLecturer = currentMember?.role === 'Lecturer';
+  const isMember = currentMember?.role === 'Member';
 
   // Count non-lecturer members
   const studentMemberCount = project?.members.filter(m => m.role !== 'Lecturer').length || 0;
@@ -412,32 +426,23 @@ export function ProjectDetailPage() {
 
       {/* Tab 2: Sơ đồ UML */}
       {activeTab === 'diagrams' && (
-        <div className="panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div className="empty-icon" style={{ fontSize: 32 }}>📐</div>
-          <h2>Phân hệ Thiết kế Sơ đồ UML</h2>
-          <p className="muted" style={{ maxWidth: 500, margin: '0 auto 20px' }}>
-            Hệ thống hỗ trợ 5 loại sơ đồ bắt buộc: Use Case, Sequence, Business Context, Activity và State Diagram. Kiểm tra luật UML tự động qua gRPC DiagramEngine.
-          </p>
-          <a href="/diagrams" className="button button-primary">
-            🚀 Mở Diagram Studio để vẽ sơ đồ &rarr;
-          </a>
+        <div>
+          <DiagramListPanel
+            projectId={project.id}
+            canEdit={!isLecturer && (isLeader || isMember)}
+            onSelectDiagram={(diagramId) => navigate(`/diagrams/${diagramId}?projectId=${encodeURIComponent(project.id)}`)}
+            onCreateNew={() => setShowCreateDiagramModal(true)}
+          />
         </div>
       )}
 
       {/* Tab 3: Thẩm định & Review */}
       {activeTab === 'reviews' && (
-        <div className="panel" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div className="empty-icon" style={{ fontSize: 32 }}>⚖️</div>
-          <h2>Phân hệ Thẩm định &amp; Phê duyệt Đồ án</h2>
-          <p className="muted" style={{ maxWidth: 500, margin: '0 auto 20px' }}>
-            {isLecturer
-              ? 'Bạn là Giảng viên hướng dẫn của dự án này. Hãy thẩm định bộ 5 sơ đồ UML, gửi nhận xét và phê duyệt đạt chuẩn.'
-              : 'Trưởng nhóm gửi yêu cầu thẩm định toàn bộ sơ đồ đồ án tới Giảng viên hướng dẫn.'}
-          </p>
-          <a href="/reviews" className="button button-secondary">
-            📋 Mở Bảng thẩm định &amp; Nhận xét &rarr;
-          </a>
-        </div>
+        <ReviewPanel
+          projectId={project.id}
+          isLeader={isLeader}
+          isLecturer={isLecturer}
+        />
       )}
 
       {/* Invite Member Modal */}
@@ -519,6 +524,11 @@ export function ProjectDetailPage() {
           </div>
         </div>
       )}
+      {showCreateDiagramModal && <CreateDiagramModal
+        projectId={project.id}
+        onClose={() => setShowCreateDiagramModal(false)}
+        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(project.id)}`)}
+      />}
     </div>
   );
 }

@@ -1,4 +1,6 @@
+import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
@@ -7,7 +9,8 @@ import type { RenderSnapshot } from '../../shared/useRenderStatus';
 
 interface DiagramViewPageProps {
   diagramId: string;
-  onBack?: () => void;
+  projectId?: string;
+  onBack?: (projectId?: string) => void;
   canEdit?: boolean;
 }
 
@@ -18,7 +21,9 @@ function sanitizeSvg(svg: string): string {
     .replace(/\s*on\w+\s*=\s*(["'][^"']*["']|[^\s>]+)/gi, '');
 }
 
-export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onBack, canEdit = true }) => {
+export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, projectId, onBack, canEdit = true }) => {
+  const notify = useToast();
+  const navigate = useNavigate();
   const [diagram, setDiagram] = useState<DiagramDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,16 +44,14 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
   const fetchDiagram = useCallback(async () => {
     try {
       const { diagram: data } = await diagramApi.getDiagramById(diagramId);
+      if (projectId && data.projectId !== projectId) throw new Error('Sơ đồ không thuộc dự án đang mở.');
       setDiagram(data);
-      if (data?.projectId) {
-        sessionStorage.setItem('currentProjectId', data.projectId);
-      }
       return data;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Không thể tải thông tin sơ đồ.');
       return null;
     }
-  }, [diagramId]);
+  }, [diagramId, projectId]);
 
   const fetchVersions = useCallback(async () => {
     try {
@@ -110,8 +113,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
     try {
       await diagramApi.requestRender(diagramId);
       renderState.track();
+      notify('Đã gửi yêu cầu render.');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.');
+      notify(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.', 'error');
     }
   };
 
@@ -121,7 +125,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
       setSelectedVersion(detail);
       setShowVersionsModal(true);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Không thể tải thông tin phiên bản.');
+      notify(err instanceof Error ? err.message : 'Không thể tải thông tin phiên bản.', 'error');
     }
   };
 
@@ -133,9 +137,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
       await diagramApi.restoreVersion(diagramId, versionNumber);
       setShowVersionsModal(false);
       await fetchDiagram();
-      alert(`Đã khôi phục thành công về phiên bản v${versionNumber}!`);
+      notify(`Đã khôi phục thành công về phiên bản v${versionNumber}!`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Không thể khôi phục phiên bản.');
+      notify(err instanceof Error ? err.message : 'Không thể khôi phục phiên bản.', 'error');
     }
   };
 
@@ -148,8 +152,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
       const created = await diagramApi.addComment(diagramId, newComment.trim());
       setComments((prev) => [...prev, created]);
       setNewComment('');
+      notify('Đã gửi góp ý.');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Không thể gửi bình luận.');
+      notify(err instanceof Error ? err.message : 'Không thể gửi bình luận.', 'error');
     } finally {
       setSubmittingComment(false);
     }
@@ -164,7 +169,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
       <div className="panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           {onBack && (
-            <button className="button button-ghost button-small" onClick={onBack} style={{ marginBottom: '8px' }}>
+            <button className="button button-ghost button-small" onClick={() => onBack ? onBack(diagram.projectId) : navigate(`/projects/${diagram.projectId}`)} style={{ marginBottom: '8px' }}>
               ← Quay lại danh sách
             </button>
           )}
@@ -215,9 +220,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
             <span style={{ fontWeight: 600 }}>Bản vẽ trực quan (SVG)</span>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button className="button button-secondary button-small" onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}>-</button>
-              <button className="button button-secondary button-small" onClick={() => setZoom(1)}>100%</button>
-              <button className="button button-secondary button-small" onClick={() => setZoom((z) => Math.min(2.5, z + 0.2))}>+</button>
+              <button className="button button-secondary button-small" aria-label="Thu nhỏ sơ đồ" onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}>-</button>
+              <button className="button button-secondary button-small" aria-label="Đặt lại tỷ lệ sơ đồ" onClick={() => setZoom(1)}>100%</button>
+              <button className="button button-secondary button-small" aria-label="Phóng to sơ đồ" onClick={() => setZoom((z) => Math.min(2.5, z + 0.2))}>+</button>
             </div>
           </div>
 
@@ -274,7 +279,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
           </div>
 
           <form onSubmit={handleAddComment}>
+            <label htmlFor={`diagram-comment-${diagramId}`}>Nội dung góp ý</label>
             <textarea
+              id={`diagram-comment-${diagramId}`}
               className="input"
               rows={3}
               placeholder="Nhập nội dung góp ý hoặc bình luận..."
@@ -300,7 +307,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
           <div className="modal-content panel" style={{ width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2>Lịch sử phiên bản: {diagram.title}</h2>
-              <button className="button button-ghost" onClick={() => setShowVersionsModal(false)}>✕</button>
+              <button className="button button-ghost" aria-label="Đóng lịch sử phiên bản" onClick={() => setShowVersionsModal(false)}>✕</button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto' }}>
