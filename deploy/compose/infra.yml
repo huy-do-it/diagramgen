@@ -1,3 +1,54 @@
-# Bảo (B-05) — sqlserver (2022, healthcheck sqlcmd), redis (7, --appendonly yes, container_name umlforge-redis), plantuml
-# Sẽ hoàn thiện ở B-05.
-services: {}
+# Bảo (B-05) — hạ tầng dùng chung: SQL Server (5 database), Redis Streams, PlantUML server.
+# Chạy riêng khi dev 1 service trên máy (cùng project/volume với bản đầy đủ):
+#   docker compose -p umlforge-v2 -f deploy/compose/infra.yml --env-file deploy/.env up -d
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: umlforge-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      # $$ để compose không thay biến — mật khẩu đọc từ env bên trong container
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: umlforge-redis
+    # AOF bật để sự kiện trên Streams không mất khi restart (ARCHITECTURE §2)
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  plantuml:
+    image: plantuml/plantuml-server:jetty
+    container_name: umlforge-plantuml
+    ports:
+      - "8085:8080"
+    healthcheck:
+      # Image không có curl/wget → dùng /dev/tcp của bash để thử mở cổng 8080
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  sqlserver-data:
+  redis-data:

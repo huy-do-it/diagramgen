@@ -1,0 +1,15 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000018",
+  "type": "ReviewDecided",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:18:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000003",
+  "producer": "diagram",
+  "payload": {
+    "reviewId": "10000000-0000-0000-0000-000000000001",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "decision": "Approved",
+    "note": "Bộ sơ đồ đạt yêu cầu.",
+    "actorUserId": "b0000000-0000-0000-0000-000000000001"
+  }
+}

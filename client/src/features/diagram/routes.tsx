@@ -7,8 +7,12 @@ import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { diagramApi } from './diagramApi';
 import { DiagramType } from './types';
+import { workspaceApi } from '../workspace/workspaceApi';
+import type { ProjectRole } from '../workspace/types';
 
 export const diagramRoutes: ReactElement[] = [
+  <Route key="project-diagram-list" path="projects/:projectId/diagrams" element={<DiagramListWrapper />} />,
+  <Route key="project-diagram-review" path="projects/:projectId/reviews" element={<ReviewPanelWrapper />} />,
   <Route
     key="diagram-list"
     path="diagrams"
@@ -36,7 +40,8 @@ function DiagramStudioLayout({ children }: { children: React.ReactNode }) {
 
 function DiagramListWrapper() {
   const [params] = useSearchParams();
-  return <ProjectDiagramList key={params.get('projectId')} />;
+  const { projectId } = useParams<{ projectId?: string }>();
+  return <ProjectDiagramList key={projectId ?? params.get('projectId')} />;
 }
 
 function ProjectDiagramList() {
@@ -45,7 +50,8 @@ function ProjectDiagramList() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const projectId = searchParams.get('projectId');
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
+  const projectId = routeProjectId ?? searchParams.get('projectId');
 
   useEffect(() => {
     if (!projectId) {
@@ -243,28 +249,62 @@ function DiagramViewWrapper() {
 
 function ReviewPanelWrapper() {
   const [searchParams] = useSearchParams();
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
+  const projectId = routeProjectId ?? searchParams.get('projectId');
+  return <ProjectReview key={projectId} projectId={projectId} />;
+}
+
+function ProjectReview({ projectId }: { projectId: string | null }) {
   const navigate = useNavigate();
-  const projectId = searchParams.get('projectId');
   const { user } = useAuth();
-  const isLeader = user?.role === 'Student';
-  const isLecturer = user?.role === 'Lecturer';
+  const [role, setRole] = useState<ProjectRole | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!projectId) {
       navigate('/projects', { replace: true });
+      return;
     }
-  }, [projectId, navigate]);
+    const controller = new AbortController();
+    setRole(null);
+    setError(null);
+    setLoading(true);
+    workspaceApi.getProject(projectId, controller.signal).then(({ project }) => {
+      if (controller.signal.aborted) return;
+      const membership = project.id === projectId
+        ? project.members.find(member => member.userId === user?.id) : undefined;
+      if (!membership) {
+        setError('Bạn không có quyền truy cập Review của dự án này.');
+        return;
+      }
+      setRole(membership.role);
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) {
+        setError(error instanceof Error ? error.message : 'Không tải được quyền truy cập dự án.');
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [projectId, user?.id, navigate, revision]);
 
-  if (!projectId) {
-    return null;
+  if (!projectId) return null;
+  if (loading) return <div className="skeleton" role="status">Đang kiểm tra quyền truy cập dự án…</div>;
+  if (error) {
+    return <div className="notice danger" role="alert">
+      <p>{error}</p>
+      <button className="button button-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button>
+    </div>;
   }
 
   return (
     <ReviewPanel
       key={projectId}
       projectId={projectId}
-      isLeader={isLeader}
-      isLecturer={isLecturer}
+      isLeader={role === 'Leader'}
+      isLecturer={role === 'Lecturer'}
     />
   );
 }

@@ -1,3 +1,4 @@
+import { apiFetch, apiRequest } from '../../shared/api';
 import type {
   DiagramDetail,
   DiagramSummary,
@@ -10,8 +11,6 @@ import type {
   Review,
   Comment,
 } from './types';
-
-import { apiFetch } from '../../shared/api';
 
 export const diagramApi = {
   async getDiagrams(params: {
@@ -32,18 +31,13 @@ export const diagramApi = {
     if (params.page) query.set('page', params.page.toString());
     if (params.pageSize) query.set('pageSize', params.pageSize.toString());
 
-    const res = await apiFetch(`/diagrams?${query.toString()}`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<PagedResult<DiagramSummary>>(`diagrams?${query.toString()}`);
   },
 
   async getDiagramById(id: string): Promise<{ diagram: DiagramDetail; etag: string | null }> {
-    const res = await apiFetch(`/diagrams/${id}`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await apiFetch(`diagrams/${encodeURIComponent(id)}`);
     const etag = res.headers.get('ETag');
-    const diagram = await res.json();
+    const diagram = (await res.json()) as DiagramDetail;
     return { diagram, etag };
   },
 
@@ -53,15 +47,10 @@ export const diagramApi = {
     title: string;
     modelJson: string;
   }): Promise<DiagramDetail> {
-    const res = await apiFetch(`/diagrams`, {
+    return await apiRequest<DiagramDetail>('diagrams', {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || JSON.stringify(err));
-    }
-    return res.json();
   },
 
   async updateDiagram(
@@ -69,27 +58,18 @@ export const diagramApi = {
     data: { title: string; modelJson: string },
     ifMatch?: string
   ): Promise<DiagramDetail> {
-    const headers: Record<string, string> = {
-      ...(ifMatch ? { 'If-Match': ifMatch } : {}),
-    };
-    const res = await apiFetch(`/diagrams/${id}`, {
+    const headers: Record<string, string> = ifMatch ? { 'If-Match': ifMatch } : {};
+    return await apiRequest<DiagramDetail>(`diagrams/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || JSON.stringify(err));
-    }
-    return res.json();
   },
 
   async requestRender(id: string): Promise<RenderResponse> {
-    const res = await apiFetch(`/diagrams/${id}/render`, {
+    return await apiRequest<RenderResponse>(`diagrams/${encodeURIComponent(id)}/render`, {
       method: 'POST',
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   },
 
   async getVersions(
@@ -97,99 +77,83 @@ export const diagramApi = {
     page = 1,
     pageSize = 20
   ): Promise<PagedResult<DiagramVersionSummary>> {
-    const res = await apiFetch(`/diagrams/${id}/versions?page=${page}&pageSize=${pageSize}`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<PagedResult<DiagramVersionSummary>>(
+      `diagrams/${encodeURIComponent(id)}/versions?page=${page}&pageSize=${pageSize}`
+    );
   },
 
   async getVersionDetail(id: string, version: number): Promise<DiagramVersionDetail> {
-    const res = await apiFetch(`/diagrams/${id}/versions/${version}`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<DiagramVersionDetail>(
+      `diagrams/${encodeURIComponent(id)}/versions/${version}`
+    );
   },
 
   async restoreVersion(id: string, version: number): Promise<DiagramDetail> {
-    const res = await apiFetch(`/diagrams/${id}/versions/${version}/restore`, {
-      method: 'POST',
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<DiagramDetail>(
+      `diagrams/${encodeURIComponent(id)}/versions/${version}/restore`,
+      {
+        method: 'POST',
+      }
+    );
   },
 
   async validateDiagram(id: string): Promise<DiagramValidationResult> {
-    const res = await apiFetch(`/diagrams/${id}/validate`, {
-      method: 'POST',
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<DiagramValidationResult>(
+      `diagrams/${encodeURIComponent(id)}/validate`,
+      {
+        method: 'POST',
+      }
+    );
   },
 
   async getSuggestions(id: string): Promise<RelationSuggestion[]> {
-    const res = await apiFetch(`/diagrams/${id}/suggestions`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<RelationSuggestion[]>(
+      `diagrams/${encodeURIComponent(id)}/suggestions`
+    );
   },
 
   async deleteDiagram(id: string): Promise<void> {
-    const res = await apiFetch(`/diagrams/${id}`, {
+    await apiRequest<void>(`diagrams/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
-    if (!res.ok) throw new Error(await res.text());
   },
 
   async getReviews(projectId: string, status?: string, page = 1, pageSize = 20): Promise<PagedResult<Review>> {
     const query = new URLSearchParams({ projectId, page: page.toString(), pageSize: pageSize.toString() });
     if (status) query.set('status', status);
-    const res = await apiFetch(`/reviews?${query.toString()}`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<PagedResult<Review>>(`reviews?${query.toString()}`);
   },
 
   async submitReview(projectId: string): Promise<Review> {
-    const res = await apiFetch(`/reviews`, {
+    return await apiRequest<Review>('reviews', {
       method: 'POST',
       body: JSON.stringify({ projectId }),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   },
 
   async approveReview(reviewId: string, note?: string): Promise<Review> {
-    const res = await apiFetch(`/reviews/${reviewId}/approve`, {
+    return await apiRequest<Review>(`reviews/${encodeURIComponent(reviewId)}/approve`, {
       method: 'POST',
       body: JSON.stringify({ note }),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   },
 
   async requestChangesReview(reviewId: string, note: string): Promise<Review> {
-    const res = await apiFetch(`/reviews/${reviewId}/request-changes`, {
+    return await apiRequest<Review>(`reviews/${encodeURIComponent(reviewId)}/request-changes`, {
       method: 'POST',
       body: JSON.stringify({ note }),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   },
 
   async getComments(diagramId: string): Promise<Comment[]> {
-    const res = await apiFetch(`/diagrams/${diagramId}/comments`, {
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await apiRequest<Comment[]>(`diagrams/${encodeURIComponent(diagramId)}/comments`);
   },
 
   async addComment(diagramId: string, content: string): Promise<Comment> {
-    const res = await apiFetch(`/diagrams/${diagramId}/comments`, {
+    return await apiRequest<Comment>(`diagrams/${encodeURIComponent(diagramId)}/comments`, {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   },
 
   async exportZip(projectId: string): Promise<Blob> {

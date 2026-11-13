@@ -1,0 +1,17 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000016",
+  "type": "RenderRequested",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:16:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000003",
+  "producer": "diagram",
+  "payload": {
+    "diagramId": "f0000000-0000-0000-0000-000000000002",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "version": 1,
+    "diagramType": 3,
+    "title": "CampusEats - Place Order",
+    "modelJson": "{\"title\":\"CampusEats - Place Order\",\"participants\":[\"Student\",\"Web App\",\"Backend API\"],\"messages\":[{\"from\":\"Student\",\"to\":\"Web App\",\"label\":\"Tap Checkout\"},{\"from\":\"Web App\",\"to\":\"Backend API\",\"label\":\"POST /api/orders\"},{\"from\":\"Backend API\",\"to\":\"Web App\",\"label\":\"201 Created\",\"isResponse\":true}]}",
+    "actorUserId": "c0000000-0000-0000-0000-000000000002"
+  }
+}

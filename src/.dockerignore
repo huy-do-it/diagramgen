@@ -1,0 +1,6 @@
+# Context build của mọi Dockerfile .NET là src/ — không gửi output build/IDE của máy vào image
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+**/TestResults/

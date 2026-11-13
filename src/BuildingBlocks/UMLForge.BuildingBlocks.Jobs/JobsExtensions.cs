@@ -33,11 +33,15 @@ public static class JobsExtensions
             .RequireAuthorization(policy => policy.RequireRole(UserRoles.Admin))
             .WithTags("Jobs");
 
-        group.MapGet("/", (IJobTrigger trigger) => Results.Ok(trigger.Jobs));
+        // Lấy IJobTrigger lúc có request: service chưa đăng ký job nào (ví dụ Diagram) thì DI không có IJobTrigger,
+        // nếu khai báo làm tham số thì ASP.NET suy ra là body của GET và service crash ngay lúc khởi động
+        group.MapGet("/", (HttpContext context) =>
+            Results.Ok(context.RequestServices.GetService<IJobTrigger>()?.Jobs ?? Array.Empty<JobInfo>()));
 
-        group.MapPost("/{jobName}/run", async (string jobName, IJobTrigger trigger, CancellationToken ct) =>
+        group.MapPost("/{jobName}/run", async (string jobName, HttpContext context, CancellationToken ct) =>
         {
-            var result = await trigger.RunNowAsync(jobName, ct);
+            var trigger = context.RequestServices.GetService<IJobTrigger>();
+            var result = trigger is null ? null : await trigger.RunNowAsync(jobName, ct);
             return result is null
                 ? Results.Problem(
                     statusCode: StatusCodes.Status404NotFound,

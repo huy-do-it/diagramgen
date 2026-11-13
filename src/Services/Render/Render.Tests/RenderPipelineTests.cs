@@ -84,6 +84,25 @@ public sealed class RenderPipelineTests
     }
 
     [Fact, Trait("BR", "BR-27")]
+    public async Task ProcessJobAsync_GenerationExceedsPipelineBudget_DoesNotCallRenderer()
+    {
+        var engine = new StubEngine
+        {
+            Generate = async ct => { await Task.Delay(Timeout.Infinite, ct); return "unreachable"; }
+        };
+        var renderer = new StubHttpHandler((_, _) => Task.FromResult(Fixtures.SvgResponse()));
+        using var http = Fixtures.Http(renderer);
+
+        var result = await Pipeline(engine, http, 1).ProcessJobAsync(Fixtures.Job());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("thời gian", result.Error);
+        Assert.Equal(1, engine.GenerateCalls);
+        Assert.Equal(0, renderer.Calls);
+        Assert.Null(result.SvgXml);
+    }
+
+    [Fact, Trait("BR", "BR-27")]
     public async Task ProcessJobAsync_Shutdown_PropagatesCancellation()
     {
         using var source = new CancellationTokenSource();

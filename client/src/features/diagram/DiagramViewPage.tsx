@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
-import { useRenderStatus } from './useRenderStatus';
+import { useRenderStatus } from '../../shared/useRenderStatus';
+import type { RenderSnapshot } from '../../shared/useRenderStatus';
 
 interface DiagramViewPageProps {
   diagramId: string;
@@ -24,16 +25,6 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
   const [diagram, setDiagram] = useState<DiagramDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const handleBack = () => {
-    if (onBack) {
-      onBack(diagram?.projectId);
-    } else if (diagram?.projectId) {
-      navigate(`/projects/${diagram.projectId}`);
-    } else {
-      navigate('/projects');
-    }
-  };
 
   // Versions
   const [versions, setVersions] = useState<DiagramVersionSummary[]>([]);
@@ -84,22 +75,42 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
     Promise.all([fetchDiagram(), fetchVersions(), fetchComments()]).finally(() => setLoading(false));
   }, [fetchDiagram, fetchVersions, fetchComments]);
 
-  // Polling hook when status is Pending or Rendering (every 2s)
-  useRenderStatus({
-    status: diagram?.status,
-    onRefresh: async () => {
-      const updated = await fetchDiagram();
-      if (updated?.status === 'Rendered' || updated?.status === 'Failed') {
-        fetchVersions();
-      }
-    },
-    intervalMs: 2000,
-  });
+  const initialSnapshot = useMemo<RenderSnapshot | null>(() => {
+    if (!diagram) return null;
+    return {
+      status: diagram.status,
+      svg: diagram.svgXml ?? null,
+      plantUml: diagram.plantUml ?? null,
+      error: diagram.lastError ?? null,
+      version: diagram.currentVersion,
+      renderedAt: diagram.renderedAt ?? null,
+      etag: diagram.eTag ?? null,
+    };
+  }, [diagram?.id]);
+
+  const renderState = useRenderStatus(diagramId, initialSnapshot);
+
+  useEffect(() => {
+    if (!renderState.snapshot) return;
+    setDiagram(prev => prev ? {
+      ...prev,
+      status: renderState.snapshot!.status,
+      svgXml: renderState.snapshot!.svg,
+      plantUml: renderState.snapshot!.plantUml,
+      lastError: renderState.snapshot!.error,
+      currentVersion: renderState.snapshot!.version,
+      renderedAt: renderState.snapshot!.renderedAt,
+      eTag: renderState.snapshot!.etag,
+    } : null);
+    if (renderState.snapshot.status === 'Rendered' || renderState.snapshot.status === 'Failed') {
+      fetchVersions();
+    }
+  }, [renderState.snapshot, fetchVersions]);
 
   const handleRender = async () => {
     try {
       await diagramApi.requestRender(diagramId);
-      fetchDiagram();
+      renderState.track();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.');
     }
@@ -153,9 +164,11 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
       {/* Top Header */}
       <div className="panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <button className="button button-ghost button-small" onClick={handleBack} style={{ marginBottom: '8px' }}>
-            ← Quay lại danh sách
-          </button>
+          {onBack && (
+            <button className="button button-ghost button-small" onClick={() => onBack ? onBack(diagram.projectId) : navigate(`/projects/${diagram.projectId}`)} style={{ marginBottom: '8px' }}>
+              ← Quay lại danh sách
+            </button>
+          )}
           <h1>{diagram.title}</h1>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '6px' }}>
             <span className="chip-btn">{DiagramTypeLabels[diagram.type]}</span>
@@ -187,6 +200,12 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
       {diagram.status === 'Failed' && diagram.lastError && (
         <div className="notice danger">
           <strong>Lỗi render:</strong> {diagram.lastError} (SVG hiển thị dưới đây là của phiên bản hợp lệ gần nhất)
+        </div>
+      )}
+
+      {diagram.needsResubmit && (
+        <div className="notice warning" style={{ marginBottom: '16px', background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '12px 16px', borderRadius: '6px' }}>
+          <strong>⚠️ Chú ý:</strong> Sơ đồ này đã được chỉnh sửa sau khi đồ án được phê duyệt. Trưởng nhóm cần gửi yêu cầu thẩm định lại (Review) sau khi hoàn tất các thay đổi.
         </div>
       )}
 

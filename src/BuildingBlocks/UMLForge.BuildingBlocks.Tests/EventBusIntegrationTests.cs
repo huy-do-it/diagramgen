@@ -93,6 +93,24 @@ public sealed class EventBusIntegrationTests
     }
 
     [Fact]
+    public async Task Handle_HandlerKeepsFailingAndMinIdleLongerThanRetryInterval_MovedToDeadLetter()
+    {
+        // Giống mặc định (MinIdle 60 s > RetryInterval 30 s) nhưng rút ngắn để test chạy nhanh
+        await using var app = await TestApp.StartAsync(_containers, options =>
+        {
+            options.RetryInterval = TimeSpan.FromSeconds(1);
+            options.MinIdleBeforeRetry = TimeSpan.FromSeconds(10);
+            options.MaxDeliveries = 3;
+        });
+
+        await app.PublishAsync(StreamNames.Workspace, new MemberRemoved(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+
+        var deadLetter = StreamNames.DeadLetter(StreamNames.Workspace);
+        Assert.True(await Eventually.TrueAsync(async () => await app.Redis.StreamLengthAsync(deadLetter) == 1, timeoutSeconds: 20));
+        Assert.Equal(0, (await app.Redis.StreamPendingAsync(StreamNames.Workspace, ConsumerGroups.DiagramSvc)).PendingMessageCount);
+    }
+
+    [Fact]
     public async Task Handle_InvalidEnvelope_MovedToDeadLetterWithoutRetry()
     {
         await using var app = await TestApp.StartAsync(_containers);

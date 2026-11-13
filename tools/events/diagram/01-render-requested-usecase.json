@@ -1,0 +1,17 @@
+{
+  "eventId": "6f1c0000-0000-0000-0000-000000000015",
+  "type": "RenderRequested",
+  "version": 1,
+  "occurredAt": "2026-11-12T08:15:00Z",
+  "correlationId": "7c000000-0000-0000-0000-000000000003",
+  "producer": "diagram",
+  "payload": {
+    "diagramId": "f0000000-0000-0000-0000-000000000001",
+    "projectId": "d0000000-0000-0000-0000-000000000001",
+    "version": 1,
+    "diagramType": 2,
+    "title": "CampusEats - Use Cases",
+    "modelJson": "{\"title\":\"CampusEats - Use Cases\",\"systemBoundary\":\"CampusEats\",\"actors\":[\"Student\",\"Canteen Staff\"],\"useCases\":[\"Browse menu\",\"Place order\",\"Pay online\",\"Confirm order\"],\"relations\":[{\"from\":\"Student\",\"to\":\"Browse menu\"},{\"from\":\"Student\",\"to\":\"Place order\"},{\"from\":\"Place order\",\"to\":\"Pay online\",\"type\":\"include\"},{\"from\":\"Canteen Staff\",\"to\":\"Confirm order\"}]}",
+    "actorUserId": "c0000000-0000-0000-0000-000000000001"
+  }
+}
