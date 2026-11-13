@@ -6,10 +6,15 @@ services:
       dockerfile: Gateway/UMLForge.Gateway/Dockerfile
     container_name: umlforge-gateway
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Docker
       Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
+      ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address: http://identity:8080
+      ReverseProxy__Clusters__workspace-cluster__Destinations__destination1__Address: http://workspace:8080
+      ReverseProxy__Clusters__diagram-cluster__Destinations__destination1__Address: http://diagram:8080
+      ReverseProxy__Clusters__render-cluster__Destinations__destination1__Address: http://render:8080
+      ReverseProxy__Clusters__notification-cluster__Destinations__destination1__Address: http://notification:8080
     ports:
       - "5000:8080"
     depends_on:
