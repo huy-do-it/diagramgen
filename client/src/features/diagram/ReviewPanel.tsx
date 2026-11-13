@@ -1,3 +1,4 @@
+import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Review, ReviewStatus } from './types';
 import { diagramApi } from './diagramApi';
@@ -9,6 +10,7 @@ interface ReviewPanelProps {
 }
 
 export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = false, isLecturer = false }) => {
+  const notify = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +19,7 @@ export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = 
   // Lecturer decision state
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -39,10 +42,10 @@ export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = 
     try {
       setSubmitting(true);
       await diagramApi.submitReview(projectId);
-      alert('Đã gửi toàn bộ sơ đồ cho Giảng viên duyệt thành công!');
+      notify('Đã gửi toàn bộ sơ đồ cho Giảng viên duyệt thành công!');
       fetchReviews();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi gửi duyệt (BR-29: Hãy đảm bảo mọi sơ đồ đã được Render).');
+      notify(err instanceof Error ? err.message : 'Lỗi khi gửi duyệt (BR-29: Hãy đảm bảo mọi sơ đồ đã được Render).', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -51,29 +54,32 @@ export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = 
   const handleApprove = async (reviewId: string) => {
     try {
       await diagramApi.approveReview(reviewId, note.trim() || undefined);
-      alert('Đã phê duyệt bộ sơ đồ thành công!');
+      notify('Đã phê duyệt bộ sơ đồ thành công!');
       setDecidingId(null);
       setNote('');
       fetchReviews();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi phê duyệt.');
+      notify(err instanceof Error ? err.message : 'Lỗi khi phê duyệt.', 'error');
     }
   };
 
   const handleRequestChanges = async (reviewId: string) => {
     if (!note.trim()) {
-      alert('Vui lòng nhập lý do hoặc nội dung yêu cầu sửa đổi.');
+      setDecidingId(reviewId);
+      setNoteError(reviewId);
+      document.getElementById(`review-note-${reviewId}`)?.focus();
+      notify('Vui lòng nhập lý do hoặc nội dung yêu cầu sửa đổi.', 'error');
       return;
     }
 
     try {
       await diagramApi.requestChangesReview(reviewId, note.trim());
-      alert('Đã gửi yêu cầu sửa đổi thành công!');
+      notify('Đã gửi yêu cầu sửa đổi thành công!');
       setDecidingId(null);
       setNote('');
       fetchReviews();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Lỗi khi gửi yêu cầu sửa đổi.');
+      notify(err instanceof Error ? err.message : 'Lỗi khi gửi yêu cầu sửa đổi.', 'error');
     }
   };
 
@@ -171,17 +177,23 @@ export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = 
                 {isLecturer && r.status === 'Submitted' && (
                   <div style={{ marginTop: '16px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
                     <h4>Đánh giá của Giảng viên hướng dẫn</h4>
+                    <label htmlFor={`review-note-${r.id}`}>Nhận xét của giảng viên</label>
                     <textarea
+                      id={`review-note-${r.id}`}
                       className="input"
                       rows={2}
                       placeholder="Nhập nhận xét hoặc yêu cầu sửa đổi (nếu có)..."
                       value={decidingId === r.id ? note : ''}
+                      aria-invalid={noteError === r.id}
+                      aria-describedby={noteError === r.id ? `review-note-error-${r.id}` : undefined}
                       onChange={(e) => {
+                        setNoteError(null);
                         setDecidingId(r.id);
                         setNote(e.target.value);
                       }}
                       style={{ width: '100%', margin: '8px 0' }}
                     />
+                    {noteError === r.id && <p className="form-error" id={`review-note-error-${r.id}`} role="alert">Nhập nhận xét trước khi yêu cầu sửa đổi.</p>}
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button className="button button-primary button-small" onClick={() => handleApprove(r.id)}>
                         ✓ Phê duyệt (Approve)

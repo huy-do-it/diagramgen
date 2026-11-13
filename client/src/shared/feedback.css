@@ -1,0 +1,15 @@
+.toast-region { position: fixed; right: 24px; bottom: 24px; z-index: 1100; width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.toast { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border: 1px solid; border-radius: 8px; box-shadow: 0 8px 24px #2027351f; pointer-events: auto; overflow-wrap: anywhere; }
+.toast--success { color: var(--color-success, #1f7a4d); background: #ecf8f1; border-color: #bfe5cf; }
+.toast--error { color: var(--color-danger, #a12d3b); background: #fff1f1; border-color: #f4cfd5; }
+.toast--info { color: var(--color-info, #344bd0); background: #eef2ff; border-color: #cdd6ff; }
+.toast-close { margin-left: auto; flex-shrink: 0; color: inherit; border: 0; background: transparent; font-size: 22px; line-height: 1; padding: 0 4px; }
+dialog.feedback-dialog { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); border: 1px solid var(--color-border, #e0e5ef); color: var(--color-text, #202735); background: var(--color-surface, #fff); border-radius: 8px; }
+.feedback-dialog::backdrop { background: #141b2e80; }
+.feedback-dialog fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+.feedback-dialog .input { width: 100%; padding: 10px 12px; border: 1px solid var(--color-border-strong, #d9dfea); border-radius: 8px; color: inherit; background: var(--color-surface, #fff); font: inherit; }
+.feedback-dialog .code-textarea { width: 100%; min-height: 160px; }
+.feedback-dialog .notice.danger { color: var(--color-danger, #a12d3b); background: #fff1f1; border-color: #f4cfd5; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.dialog-example { margin: 12px 0 0; border: 0; padding: 0; color: var(--color-primary, #344bd0); background: transparent; text-decoration: underline; }
+.feedback-dialog :focus-visible, .toast :focus-visible { outline: 2px solid var(--color-focus, #8b9aff); outline-offset: 2px; }

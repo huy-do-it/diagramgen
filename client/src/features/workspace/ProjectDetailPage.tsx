@@ -6,8 +6,7 @@ import { workspaceApi } from './workspaceApi';
 import { InviteMemberModal } from './InviteMemberModal';
 import { DiagramListPanel } from '../diagram/DiagramListPanel';
 import { ReviewPanel } from '../diagram/ReviewPanel';
-import { diagramApi } from '../diagram/diagramApi';
-import { DiagramType } from '../diagram/types';
+import { CreateDiagramModal } from '../diagram/CreateDiagramModal';
 import type { ProjectDetail, ProjectMemberItem, UserDirectoryItem } from './types';
 
 export function ProjectDetailPage() {
@@ -47,55 +46,6 @@ function ProjectDetailContent() {
 
   // Create Diagram Modal State
   const [showCreateDiagramModal, setShowCreateDiagramModal] = useState(false);
-  const [newDiagramTitle, setNewDiagramTitle] = useState('CampusEats Order Management');
-  const [newDiagramType, setNewDiagramType] = useState<DiagramType>(DiagramType.UseCase);
-  const [newDiagramJson, setNewDiagramJson] = useState(`{
-  "systemBoundary": "CampusEats",
-  "actors": ["Student", "Restaurant"],
-  "useCases": ["Order Food", "Track Order", "Update Menu"],
-  "relations": [
-    { "from": "Student", "to": "Order Food", "type": "association" },
-    { "from": "Student", "to": "Track Order", "type": "association" },
-    { "from": "Restaurant", "to": "Update Menu", "type": "association" }
-  ]
-}`);
-  const [createDiagramError, setCreateDiagramError] = useState<string | null>(null);
-  const [creatingDiagram, setCreatingDiagram] = useState(false);
-
-  const handleCreateDiagramSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!project) return;
-    try {
-      setCreatingDiagram(true);
-      setCreateDiagramError(null);
-      const created = await diagramApi.createDiagram({
-        projectId: project.id,
-        type: newDiagramType,
-        title: newDiagramTitle,
-        modelJson: newDiagramJson,
-      });
-      if (!mounted.current) return;
-      setShowCreateDiagramModal(false);
-      navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(project.id)}`);
-    } catch (err: unknown) {
-      setCreateDiagramError(err instanceof Error ? err.message : 'Không thể tạo sơ đồ.');
-    } finally {
-      setCreatingDiagram(false);
-    }
-  };
-
-  const loadInvalidUmlTemplate = () => {
-    setNewDiagramTitle('Sơ đồ lỗi UML (Association giữa 2 Actor)');
-    setNewDiagramJson(`{
-  "systemBoundary": "CampusEats",
-  "actors": ["Student", "Admin"],
-  "useCases": ["Login"],
-  "relations": [
-    { "from": "Student", "to": "Admin", "type": "association" }
-  ]
-}`);
-  };
-
   const fetchProject = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -574,109 +524,11 @@ function ProjectDetailContent() {
           </div>
         </div>
       )}
-      {/* Create Diagram Modal */}
-      {showCreateDiagramModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.6)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: '28px',
-            width: '640px',
-            maxWidth: '90%',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>Tạo Sơ đồ UML Mới</h3>
-
-            {createDiagramError && (
-              <div style={{
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                padding: '12px',
-                borderRadius: '6px',
-                marginBottom: '16px',
-                fontSize: '14px'
-              }}>
-                <strong>Lỗi kiểm tra quy tắc:</strong> {createDiagramError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateDiagramSubmit}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Tiêu đề sơ đồ:</label>
-                <input
-                  type="text"
-                  required
-                  value={newDiagramTitle}
-                  onChange={(e) => setNewDiagramTitle(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px' }}>Loại sơ đồ:</label>
-                <select
-                  value={newDiagramType}
-                  onChange={(e) => setNewDiagramType(Number(e.target.value))}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                >
-                  <option value={DiagramType.UseCase}>Use Case Diagram</option>
-                  <option value={DiagramType.Sequence}>Sequence Diagram</option>
-                  <option value={DiagramType.BusinessContext}>Business Context Diagram</option>
-                  <option value={DiagramType.Activity}>Activity Diagram</option>
-                  <option value={DiagramType.State}>State Diagram</option>
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 500 }}>Model JSON:</label>
-                  <button
-                    type="button"
-                    onClick={loadInvalidUmlTemplate}
-                    style={{ fontSize: '12px', color: '#b91c1c', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                  >
-                    ⚠️ Nạp mẫu vi phạm luật UML (Test Edge Case)
-                  </button>
-                </div>
-                <textarea
-                  rows={8}
-                  required
-                  value={newDiagramJson}
-                  onChange={(e) => setNewDiagramJson(e.target.value)}
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: '13px', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateDiagramModal(false)}
-                  style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer' }}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  id="btn-submit-create-diagram"
-                  disabled={creatingDiagram}
-                  style={{ padding: '8px 20px', borderRadius: '6px', background: '#2563eb', color: '#ffffff', border: 'none', fontWeight: 500, cursor: 'pointer' }}
-                >
-                  {creatingDiagram ? 'Đang tạo...' : 'Xác nhận Tạo'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showCreateDiagramModal && <CreateDiagramModal
+        projectId={project.id}
+        onClose={() => setShowCreateDiagramModal(false)}
+        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(project.id)}`)}
+      />}
     </div>
   );
 }

@@ -76,7 +76,7 @@ try {
   async function open(scenario, path = `/reviews?projectId=${A}`) {
     await evaluate(`sessionStorage.setItem('test.scenario', ${JSON.stringify(JSON.stringify(scenario))})`);
     await cdp('Page.navigate', { url: 'http://127.0.0.1:5181' + path });
-    await waitFor(`window.__scenario && !document.querySelector('[role="status"]') && (document.querySelector('.review-panel') || document.querySelector('[role="alert"]'))`);
+    await waitFor(`window.__scenario && !document.querySelector('.skeleton[role="status"]') && (document.querySelector('.review-panel') || document.querySelector('[role="alert"]'))`);
   }
   const button = text => `[...document.querySelectorAll('button')].some(b => b.textContent.includes(${JSON.stringify(text)}))`;
   for (const [globalRole, role, submit, approve] of [
@@ -99,7 +99,7 @@ try {
   console.log('PASS project route takes precedence over query parameter');
   await evaluate(`sessionStorage.setItem('test.scenario', '{"slow":true}')`);
   await cdp('Page.navigate', { url: `http://127.0.0.1:5181/reviews?projectId=${A}` });
-  await waitFor(`window.__scenario?.slow && document.querySelector('[role="status"]')`);
+  await waitFor(`window.__scenario?.slow && document.querySelector('.skeleton[role="status"]')`);
   assert.equal(await evaluate(button('Gửi duyệt')), false);
   await evaluate(`history.pushState({}, '', '/reviews?projectId=${B}'); dispatchEvent(new PopStateEvent('popstate'));`);
   await waitFor(`document.querySelector('.review-panel') !== null`);
