@@ -1,5 +1,12 @@
 import type { ReactElement } from 'react';
+import { Route } from 'react-router';
+import { ProjectsPage } from './ProjectsPage';
+import { ProjectDetailPage } from './ProjectDetailPage';
+import { MyInvitationsPage } from './MyInvitationsPage';
 
-// Huy (H-06) — UI-03, UI-04, UI-05, lời mời của tôi. Mỗi <Route> cần key.
-// Ví dụ: <Route key="projects" path="projects" element={<ProjectsPage />} />
-export const workspaceRoutes: ReactElement[] = [];
+/** Các trang Workspace cần đăng nhập, hiển thị trong AppLayout. */
+export const workspaceRoutes: ReactElement[] = [
+  <Route key="projects" path="projects" element={<ProjectsPage />} />,
+  <Route key="project-detail" path="projects/:id" element={<ProjectDetailPage />} />,
+  <Route key="my-invitations" path="invitations/mine" element={<MyInvitationsPage />} />,
+];
