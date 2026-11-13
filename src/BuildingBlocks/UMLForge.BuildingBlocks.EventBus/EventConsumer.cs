@@ -106,14 +106,20 @@ internal sealed class EventConsumer<TDbContext> : BackgroundService
     }
 
     /// <summary>
-    /// Message treo quá lâu: giao ≥ MaxDeliveries lần → DLQ; của consumer khác → XCLAIM về mình;
+    /// Message treo: giao ≥ MaxDeliveries lần → DLQ; của consumer khác treo quá MinIdleBeforeRetry → XCLAIM về mình;
     /// sau đó xử lý lại toàn bộ pending của chính mình.
     /// </summary>
     private async Task RetryPendingAsync(CancellationToken ct)
     {
-        var pending = await _maintenance.GetPendingAsync(_options.Stream, _options.Group, _options.MinIdleBeforeRetry, ct);
+        // Lấy mọi pending, không lọc idle: message của chính mình bị đọc lại mỗi RetryInterval nên Redis luôn
+        // đặt lại idle về 0 — nếu lọc theo MinIdleBeforeRetry (60 s > 30 s) thì message lỗi không bao giờ tới DLQ
+        var pending = await _maintenance.GetPendingAsync(_options.Stream, _options.Group, TimeSpan.Zero, ct);
+        var minIdleMs = (long)_options.MinIdleBeforeRetry.TotalMilliseconds;
 
-        foreach (var entry in pending.Where(p => p.DeliveryCount >= _options.MaxDeliveries))
+        // Của mình: xử lý tuần tự nên không có gì đang chạy dở; của consumer khác: chỉ đụng khi đã treo đủ lâu
+        bool IsStale(PendingEntry entry) => entry.Consumer == _consumerName || entry.IdleMs >= minIdleMs;
+
+        foreach (var entry in pending.Where(p => p.DeliveryCount >= _options.MaxDeliveries && IsStale(p)))
         {
             await _maintenance.MoveToDeadLetterAsync(_options.Stream, _options.Group, entry.Id, ct);
             _logger.LogWarning("Chuyển {MessageId} sang {DeadLetter} sau {Deliveries} lần giao lỗi",
@@ -121,7 +127,7 @@ internal sealed class EventConsumer<TDbContext> : BackgroundService
         }
 
         var fromOthers = pending
-            .Where(p => p.DeliveryCount < _options.MaxDeliveries && p.Consumer != _consumerName)
+            .Where(p => p.DeliveryCount < _options.MaxDeliveries && p.Consumer != _consumerName && p.IdleMs >= minIdleMs)
             .Select(p => p.Id)
             .ToList();
         if (fromOthers.Count > 0)
