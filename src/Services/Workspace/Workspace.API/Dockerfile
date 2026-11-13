@@ -9,8 +9,10 @@ USER app
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG REVISION=dev
 WORKDIR /src
 
+COPY Directory.Build.props ./
 COPY ["Contracts/UMLForge.Contracts.Events/UMLForge.Contracts.Events.csproj", "Contracts/UMLForge.Contracts.Events/"]
 COPY ["BuildingBlocks/UMLForge.BuildingBlocks.Auth/UMLForge.BuildingBlocks.Auth.csproj", "BuildingBlocks/UMLForge.BuildingBlocks.Auth/"]
 COPY ["BuildingBlocks/UMLForge.BuildingBlocks.Web/UMLForge.BuildingBlocks.Web.csproj", "BuildingBlocks/UMLForge.BuildingBlocks.Web/"]
@@ -28,11 +30,13 @@ COPY BuildingBlocks/ BuildingBlocks/
 COPY Services/Workspace/ Services/Workspace/
 
 WORKDIR "/src/Services/Workspace/Workspace.API"
-RUN dotnet build "Workspace.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN echo "Building Workspace.API revision: ${REVISION}"
+RUN dotnet build "Workspace.API.csproj" -c $BUILD_CONFIGURATION -o /app/build /p:SourceRevisionId=$REVISION
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Workspace.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+ARG REVISION=dev
+RUN dotnet publish "Workspace.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:SourceRevisionId=$REVISION
 
 FROM base AS final
 WORKDIR /app
