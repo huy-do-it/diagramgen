@@ -327,8 +327,15 @@ export function DiagramEditorPage() {
     }
   }
 
+  // Validate/Suggest của Diagram API chạy trên bản đã lưu → còn thay đổi chưa lưu thì kết quả sẽ sai
+  const SAVE_BEFORE_CHECK = 'Còn thay đổi chưa lưu. Bấm "Lưu" trước — kiểm tra UML và gợi ý quan hệ chạy trên bản đã lưu.';
+
   async function handleValidate() {
     if (!diagramId || !checkBeforeSubmit()) return;
+    if (isDirty) {
+      setError(SAVE_BEFORE_CHECK);
+      return;
+    }
     setChecking(true);
     clearMessages();
     try {
@@ -345,6 +352,10 @@ export function DiagramEditorPage() {
 
   async function handleSuggest() {
     if (!diagramId) return;
+    if (isDirty) {
+      setError(SAVE_BEFORE_CHECK);
+      return;
+    }
     setChecking(true);
     clearMessages();
     try {
