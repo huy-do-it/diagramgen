@@ -13,6 +13,7 @@ using Identity.Service.Interfaces;
 using Identity.Service.Jobs;
 using Identity.Service.Services;
 using Identity.Service.Validators;
+using UMLForge.BuildingBlocks.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -122,9 +123,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 // Background Jobs & Outbox Publisher
-builder.Services.AddSingleton<PurgeRefreshTokensJob>();
-builder.Services.AddSingleton<IScheduledJob>(sp => sp.GetRequiredService<PurgeRefreshTokensJob>());
-builder.Services.AddHostedService(sp => sp.GetRequiredService<PurgeRefreshTokensJob>());
+builder.Services.AddScheduledJob<PurgeRefreshTokensJob>();
 builder.Services.AddHostedService<OutboxPublisher>();
 
 // Validators
@@ -151,6 +150,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapJobTriggerEndpoint("identity");
 
 // Health check endpoint verifying Database and Redis readiness
 app.MapGet("/health", async (IdentityDbContext dbContext, IConnectionMultiplexer? redis, ILogger<Program> logger) =>
