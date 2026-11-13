@@ -1,3 +1,4 @@
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Service.DTOs;
 

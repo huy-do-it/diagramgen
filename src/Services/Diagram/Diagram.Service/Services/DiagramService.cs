@@ -1,12 +1,14 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Outbox;
+using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Interfaces;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Events;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Helpers;
 using UMLForge.Diagram.Service.Interfaces;
 using UMLForge.Diagram.Service.Models.Validation;
@@ -22,7 +24,7 @@ public class DiagramService : IDiagramService
     private readonly IDiagramVersionRepository _versionRepository;
     private readonly IMemberAccessRepository _memberAccessRepository;
     private readonly ICurrentUser _currentUser;
-    private readonly IOutboxRepository? _outboxRepository;
+    private readonly IOutbox? _outbox;
     private readonly IReviewRepository? _reviewRepository;
     private readonly IDiagramEngineClient _engineClient;
 
@@ -31,7 +33,7 @@ public class DiagramService : IDiagramService
         IDiagramVersionRepository versionRepository,
         IMemberAccessRepository memberAccessRepository,
         ICurrentUser currentUser,
-        IOutboxRepository? outboxRepository = null,
+        IOutbox? outbox = null,
         IReviewRepository? reviewRepository = null,
         IDiagramEngineClient? engineClient = null)
     {
@@ -39,9 +41,9 @@ public class DiagramService : IDiagramService
         _versionRepository = versionRepository;
         _memberAccessRepository = memberAccessRepository;
         _currentUser = currentUser;
-        _outboxRepository = outboxRepository;
+        _outbox = outbox;
         _reviewRepository = reviewRepository;
-        _engineClient = engineClient ?? new DiagramEngineClient();
+        _engineClient = engineClient ?? new FakeDiagramEngineClient();
     }
 
     public async Task<PagedResult<DiagramSummaryResponse>> GetDiagramsAsync(
@@ -156,8 +158,10 @@ public class DiagramService : IDiagramService
             throw new BusinessRuleException(
                 "BR-UML",
                 "Diagram model violates UML rules: " + string.Join("; ", umlValidation.Errors),
-                422,
-                new Dictionary<string, string[]> { ["uml"] = umlValidation.Errors.ToArray() });
+                422)
+            {
+                Errors = new Dictionary<string, string[]> { ["uml"] = umlValidation.Errors.ToArray() }
+            };
         }
 
         var diagramId = Guid.NewGuid();
@@ -242,8 +246,10 @@ public class DiagramService : IDiagramService
             throw new BusinessRuleException(
                 "BR-UML",
                 "Diagram model violates UML rules: " + string.Join("; ", umlValidation.Errors),
-                422,
-                new Dictionary<string, string[]> { ["uml"] = umlValidation.Errors.ToArray() });
+                422)
+            {
+                Errors = new Dictionary<string, string[]> { ["uml"] = umlValidation.Errors.ToArray() }
+            };
         }
 
         var now = DateTime.UtcNow;
@@ -367,40 +373,18 @@ public class DiagramService : IDiagramService
         diagram.UpdatedAt = DateTime.UtcNow;
         _diagramRepository.Update(diagram);
 
-        // Tạo sự kiện RenderRequested và lưu vào Outbox trong cùng 1 transaction
-        if (_outboxRepository != null)
+        // Tạo sự kiện RenderRequested và lưu vào Outbox trong cùng 1 transaction (T-03: đúng payload chuẩn)
+        if (_outbox != null)
         {
-            var eventId = Guid.NewGuid();
-            var payload = new RenderRequested(
+            _outbox.Add(StreamNames.Diagram, new RenderRequested(
                 diagram.Id,
                 diagram.ProjectId,
                 diagram.CurrentVersion,
-                diagram.Type.ToString(),
+                (int)diagram.Type,
                 diagram.Title,
                 diagram.ModelJson,
                 _currentUser.UserId
-            );
-
-            var envelope = new EventEnvelope<RenderRequested>(
-                eventId,
-                "RenderRequested",
-                1,
-                DateTime.UtcNow,
-                Guid.NewGuid(),
-                "diagram",
-                payload
-            );
-
-            var outboxMessage = new OutboxMessage
-            {
-                Id = eventId,
-                Stream = StreamNames.Diagram,
-                Type = "RenderRequested",
-                Envelope = JsonSerializer.Serialize(envelope),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _outboxRepository.AddAsync(outboxMessage, cancellationToken);
+            ));
         }
 
         await _diagramRepository.SaveChangesAsync(cancellationToken);

@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Context;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Repositories;
 using UMLForge.Diagram.Service.EventHandlers;
-using UMLForge.Diagram.Service.Events;
 using Xunit;
 
 namespace UMLForge.Diagram.Tests;
@@ -15,8 +15,6 @@ public class WorkspaceEventsHandlerTests
     private readonly DiagramDbContext _dbContext;
     private readonly MemberAccessRepository _memberAccessRepo;
     private readonly DiagramRepository _diagramRepo;
-    private readonly InboxRepository _inboxRepo;
-    private readonly WorkspaceEventsHandler _handler;
 
     private readonly Guid _testProjectId = Guid.NewGuid();
     private readonly Guid _testUserId = Guid.NewGuid();
@@ -30,70 +28,34 @@ public class WorkspaceEventsHandlerTests
         _dbContext = new DiagramDbContext(options);
         _memberAccessRepo = new MemberAccessRepository(_dbContext);
         _diagramRepo = new DiagramRepository(_dbContext);
-        _inboxRepo = new InboxRepository(_dbContext);
-
-        _handler = new WorkspaceEventsHandler(_memberAccessRepo, _diagramRepo, _inboxRepo);
     }
 
     [Fact]
-    public async Task HandleProjectCreated_CreatesLeaderAccess_And_RecordsInboxMessage()
+    public async Task HandleProjectCreated_CreatesLeaderAccess()
     {
-        var eventId = Guid.NewGuid();
-        var envelope = new EventEnvelope<ProjectCreated>(
-            eventId,
-            "ProjectCreated",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
+        var handler = new ProjectCreatedHandler(_memberAccessRepo);
+        var envelope = EventEnvelope.Create(
             "workspace",
-            new ProjectCreated(_testProjectId, "CampusEats", _testUserId, _testUserId)
-        );
+            new ProjectCreated(_testProjectId, "CampusEats", _testUserId, _testUserId));
 
-        var handled = await _handler.HandleProjectCreatedAsync(envelope);
+        await handler.HandleAsync(envelope, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
 
-        handled.Should().BeTrue();
         var access = await _memberAccessRepo.GetAccessAsync(_testProjectId, _testUserId);
         access.Should().NotBeNull();
         access!.Role.Should().Be(ProjectRole.Leader);
-
-        var processed = await _inboxRepo.HasBeenProcessedAsync(eventId, "diagram-svc");
-        processed.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task HandleProjectCreated_WhenDuplicate_IsIdempotent()
-    {
-        var eventId = Guid.NewGuid();
-        var envelope = new EventEnvelope<ProjectCreated>(
-            eventId,
-            "ProjectCreated",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
-            "workspace",
-            new ProjectCreated(_testProjectId, "CampusEats", _testUserId, _testUserId)
-        );
-
-        await _handler.HandleProjectCreatedAsync(envelope);
-        var secondRun = await _handler.HandleProjectCreatedAsync(envelope);
-
-        secondRun.Should().BeFalse();
     }
 
     [Fact]
     public async Task HandleMemberAdded_AddsOrUpdatesMemberAccess()
     {
-        var envelope = new EventEnvelope<MemberAdded>(
-            Guid.NewGuid(),
-            "MemberAdded",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
+        var handler = new MemberAddedHandler(_memberAccessRepo);
+        var envelope = EventEnvelope.Create(
             "workspace",
-            new MemberAdded(_testProjectId, "CampusEats", _testUserId, ProjectRole.Member, Guid.NewGuid())
-        );
+            new MemberAdded(_testProjectId, "CampusEats", _testUserId, ProjectRole.Member, Guid.NewGuid()));
 
-        await _handler.HandleMemberAddedAsync(envelope);
+        await handler.HandleAsync(envelope, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
 
         var access = await _memberAccessRepo.GetAccessAsync(_testProjectId, _testUserId);
         access.Should().NotBeNull();
@@ -111,17 +73,13 @@ public class WorkspaceEventsHandlerTests
         });
         await _dbContext.SaveChangesAsync();
 
-        var envelope = new EventEnvelope<MemberRemoved>(
-            Guid.NewGuid(),
-            "MemberRemoved",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
+        var handler = new MemberRemovedHandler(_memberAccessRepo);
+        var envelope = EventEnvelope.Create(
             "workspace",
-            new MemberRemoved(_testProjectId, _testUserId, Guid.NewGuid())
-        );
+            new MemberRemoved(_testProjectId, _testUserId, Guid.NewGuid()));
 
-        await _handler.HandleMemberRemovedAsync(envelope);
+        await handler.HandleAsync(envelope, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
 
         var access = await _memberAccessRepo.GetAccessAsync(_testProjectId, _testUserId);
         access.Should().BeNull();
@@ -141,17 +99,13 @@ public class WorkspaceEventsHandlerTests
         });
         await _dbContext.SaveChangesAsync();
 
-        var envelope = new EventEnvelope<LecturerAssigned>(
-            Guid.NewGuid(),
-            "LecturerAssigned",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
+        var handler = new LecturerAssignedHandler(_memberAccessRepo);
+        var envelope = EventEnvelope.Create(
             "workspace",
-            new LecturerAssigned(_testProjectId, "CampusEats", newLecturerId, oldLecturerId, Guid.NewGuid())
-        );
+            new LecturerAssigned(_testProjectId, "CampusEats", newLecturerId, oldLecturerId, Guid.NewGuid()));
 
-        await _handler.HandleLecturerAssignedAsync(envelope);
+        await handler.HandleAsync(envelope, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
 
         var oldAccess = await _memberAccessRepo.GetAccessAsync(_testProjectId, oldLecturerId);
         oldAccess.Should().BeNull();
@@ -184,17 +138,13 @@ public class WorkspaceEventsHandlerTests
         await _diagramRepo.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
 
-        var envelope = new EventEnvelope<ProjectDeleted>(
-            Guid.NewGuid(),
-            "ProjectDeleted",
-            1,
-            DateTime.UtcNow,
-            Guid.NewGuid(),
+        var handler = new ProjectDeletedHandler(_memberAccessRepo, _diagramRepo);
+        var envelope = EventEnvelope.Create(
             "workspace",
-            new ProjectDeleted(_testProjectId, _testUserId)
-        );
+            new ProjectDeleted(_testProjectId, _testUserId));
 
-        await _handler.HandleProjectDeletedAsync(envelope);
+        await handler.HandleAsync(envelope, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
 
         var access = await _memberAccessRepo.GetAccessAsync(_testProjectId, _testUserId);
         access.Should().BeNull();

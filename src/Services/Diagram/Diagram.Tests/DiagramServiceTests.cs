@@ -2,12 +2,15 @@ using System.Text;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Outbox;
+using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Context;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Repositories;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
 using UMLForge.Diagram.Service.Services;
 using Xunit;
@@ -16,11 +19,28 @@ namespace UMLForge.Diagram.Tests;
 
 public class DiagramServiceTests
 {
+    private sealed class TestOutbox(DiagramDbContext dbContext, string producer = Producers.Diagram) : IOutbox
+    {
+        public void Add<T>(string stream, T payload) where T : class
+        {
+            var type = EventTypeRegistry.NameOf<T>();
+            var envelope = EventEnvelope.Create(producer, payload);
+            dbContext.OutboxMessages.Add(new OutboxMessage
+            {
+                Id = envelope.EventId,
+                Stream = stream,
+                Type = type,
+                Envelope = EventJson.Serialize(envelope),
+                CreatedAt = envelope.OccurredAt
+            });
+        }
+    }
+
     private readonly DiagramDbContext _dbContext;
     private readonly DiagramRepository _diagramRepository;
     private readonly DiagramVersionRepository _versionRepository;
     private readonly MemberAccessRepository _memberAccessRepository;
-    private readonly OutboxRepository _outboxRepository;
+    private readonly IOutbox _outbox;
     private readonly ReviewRepository _reviewRepository;
     private readonly Mock<ICurrentUser> _currentUserMock;
     private readonly DiagramService _service;
@@ -47,7 +67,7 @@ public class DiagramServiceTests
         _diagramRepository = new DiagramRepository(_dbContext);
         _versionRepository = new DiagramVersionRepository(_dbContext);
         _memberAccessRepository = new MemberAccessRepository(_dbContext);
-        _outboxRepository = new OutboxRepository(_dbContext);
+        _outbox = new TestOutbox(_dbContext);
         _reviewRepository = new ReviewRepository(_dbContext);
         _currentUserMock = new Mock<ICurrentUser>();
 
@@ -55,7 +75,7 @@ public class DiagramServiceTests
         _currentUserMock.Setup(u => u.Role).Returns("Student");
         _currentUserMock.Setup(u => u.Username).Returns("student1");
 
-        _service = new DiagramService(_diagramRepository, _versionRepository, _memberAccessRepository, _currentUserMock.Object, _outboxRepository, _reviewRepository);
+        _service = new DiagramService(_diagramRepository, _versionRepository, _memberAccessRepository, _currentUserMock.Object, _outbox, _reviewRepository);
     }
 
     [Fact]

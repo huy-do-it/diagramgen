@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Outbox;
+using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Events;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Interfaces;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Events;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
 
 namespace UMLForge.Diagram.Service.Services;
@@ -21,20 +23,20 @@ public class ReviewService : IReviewService
     private readonly IDiagramRepository _diagramRepository;
     private readonly IMemberAccessRepository _memberAccessRepository;
     private readonly ICurrentUser _currentUser;
-    private readonly IOutboxRepository? _outboxRepository;
+    private readonly IOutbox? _outbox;
 
     public ReviewService(
         IReviewRepository reviewRepository,
         IDiagramRepository diagramRepository,
         IMemberAccessRepository memberAccessRepository,
         ICurrentUser currentUser,
-        IOutboxRepository? outboxRepository = null)
+        IOutbox? outbox = null)
     {
         _reviewRepository = reviewRepository;
         _diagramRepository = diagramRepository;
         _memberAccessRepository = memberAccessRepository;
         _currentUser = currentUser;
-        _outboxRepository = outboxRepository;
+        _outbox = outbox;
     }
 
     public async Task<ReviewDetailResponse> SubmitReviewAsync(
@@ -91,8 +93,10 @@ public class ReviewService : IReviewService
             throw new BusinessRuleException(
                 "BR-29",
                 "All diagrams in project must be in Rendered status before submitting for review.",
-                400,
-                errors);
+                400)
+            {
+                Errors = errors
+            };
         }
 
         // Tạo snapshot danh sách { diagramId, version, title }
@@ -117,33 +121,11 @@ public class ReviewService : IReviewService
         };
 
         // Outbox event: ReviewSubmitted
-        if (_outboxRepository != null)
-        {
-            var reviewSubmittedEvent = new ReviewSubmitted(
-                review.Id,
-                review.ProjectId,
-                _currentUser.UserId
-            );
-
-            var envelope = new EventEnvelope<ReviewSubmitted>(
-                Guid.NewGuid(),
-                "ReviewSubmitted",
-                1,
-                now,
-                Guid.NewGuid(),
-                "diagram",
-                reviewSubmittedEvent
-            );
-
-            _outboxRepository.AddMessage(new OutboxMessage
-            {
-                Id = envelope.EventId,
-                Stream = StreamNames.Diagram,
-                Type = "ReviewSubmitted",
-                Envelope = JsonSerializer.Serialize(envelope),
-                CreatedAt = now
-            });
-        }
+        _outbox?.Add(StreamNames.Diagram, new ReviewSubmitted(
+            review.Id,
+            review.ProjectId,
+            _currentUser.UserId
+        ));
 
         await _reviewRepository.AddAsync(review, cancellationToken);
         await _reviewRepository.SaveChangesAsync(cancellationToken);
@@ -247,35 +229,14 @@ public class ReviewService : IReviewService
         review.Note = note?.Trim();
 
         // Outbox event: ReviewDecided
-        if (_outboxRepository != null)
-        {
-            var reviewDecidedEvent = new ReviewDecided(
-                review.Id,
-                review.ProjectId,
-                targetStatus.ToString(),
-                _currentUser.UserId,
-                review.Note
-            );
-
-            var envelope = new EventEnvelope<ReviewDecided>(
-                Guid.NewGuid(),
-                "ReviewDecided",
-                1,
-                now,
-                Guid.NewGuid(),
-                "diagram",
-                reviewDecidedEvent
-            );
-
-            _outboxRepository.AddMessage(new OutboxMessage
-            {
-                Id = envelope.EventId,
-                Stream = StreamNames.Diagram,
-                Type = "ReviewDecided",
-                Envelope = JsonSerializer.Serialize(envelope),
-                CreatedAt = now
-            });
-        }
+        var decision = targetStatus == ReviewStatus.Approved ? ReviewDecisions.Approved : ReviewDecisions.ChangesRequested;
+        _outbox?.Add(StreamNames.Diagram, new ReviewDecided(
+            review.Id,
+            review.ProjectId,
+            decision,
+            review.Note,
+            _currentUser.UserId
+        ));
 
         _reviewRepository.Update(review);
         await _reviewRepository.SaveChangesAsync(cancellationToken);

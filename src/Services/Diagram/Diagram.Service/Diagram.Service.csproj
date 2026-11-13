@@ -1,18 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Diagram.Repositories\Diagram.Repositories.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Events\UMLForge.Contracts.Events.csproj" />
+    <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Grpc\UMLForge.Contracts.Grpc.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Outbox\UMLForge.BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.EventBus\UMLForge.BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Auth\UMLForge.BuildingBlocks.Auth.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Web\UMLForge.BuildingBlocks.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.4" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
 </Project>

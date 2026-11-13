@@ -2,8 +2,9 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Repositories.Interfaces;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
 
 namespace UMLForge.Diagram.Service.Services;

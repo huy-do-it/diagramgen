@@ -1,13 +1,18 @@
 using FluentAssertions;
+using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
+using UMLForge.BuildingBlocks.Auth;
+using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Grpc;
 using UMLForge.Diagram.Repositories.Context;
 using UMLForge.Diagram.Repositories.Entities;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Repositories.Repositories;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Exceptions;
 using UMLForge.Diagram.Service.Interfaces;
+using UMLForge.Diagram.Service.Models.Validation;
 using UMLForge.Diagram.Service.Services;
 using Xunit;
 
@@ -19,7 +24,7 @@ public class DiagramEngineClientTests
     private readonly DiagramRepository _diagramRepository;
     private readonly DiagramVersionRepository _versionRepository;
     private readonly MemberAccessRepository _memberAccessRepository;
-    private readonly DiagramEngineClient _engineClient;
+    private readonly Mock<IDiagramEngineClient> _engineClientMock;
     private readonly Mock<ICurrentUser> _currentUserMock;
     private readonly DiagramService _service;
 
@@ -36,7 +41,7 @@ public class DiagramEngineClientTests
         _diagramRepository = new DiagramRepository(_dbContext);
         _versionRepository = new DiagramVersionRepository(_dbContext);
         _memberAccessRepository = new MemberAccessRepository(_dbContext);
-        _engineClient = new DiagramEngineClient();
+        _engineClientMock = new Mock<IDiagramEngineClient>();
         _currentUserMock = new Mock<ICurrentUser>();
 
         _currentUserMock.Setup(u => u.UserId).Returns(_testUserId);
@@ -48,98 +53,26 @@ public class DiagramEngineClientTests
             _versionRepository,
             _memberAccessRepository,
             _currentUserMock.Object,
-            engineClient: _engineClient);
+            engineClient: _engineClientMock.Object);
     }
 
     [Fact]
-    [Trait("BR", "BR-18")]
-    public async Task ValidateDiagram_ValidUseCase_ReturnsValid()
+    public async Task FakeDiagramEngineClient_ValidateDiagramAsync_ReturnsValid()
     {
-        var validJson = @"{
-            ""systemBoundary"": ""CampusEats"",
-            ""actors"": [""Customer""],
-            ""useCases"": [""Order Food""],
-            ""relations"": [
-                { ""from"": ""Customer"", ""to"": ""Order Food"", ""type"": ""association"" }
-            ]
-        }";
-
-        var result = await _engineClient.ValidateDiagramAsync(DiagramType.UseCase, validJson);
+        var client = new FakeDiagramEngineClient();
+        var result = await client.ValidateDiagramAsync(DiagramType.UseCase, "{}");
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
-    [Trait("BR", "BR-18")]
-    public async Task ValidateDiagram_AssociationBetweenTwoActors_ReturnsError()
+    public async Task FakeDiagramEngineClient_SuggestRelationsAsync_ReturnsEmptyList()
     {
-        var invalidJson = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""Actor1"", ""Actor2""],
-            ""useCases"": [""UseCase1""],
-            ""relations"": [
-                { ""from"": ""Actor1"", ""to"": ""Actor2"", ""type"": ""association"" }
-            ]
-        }";
+        var client = new FakeDiagramEngineClient();
+        var suggestions = await client.SuggestRelationsAsync(DiagramType.UseCase, "{}");
 
-        var result = await _engineClient.ValidateDiagramAsync(DiagramType.UseCase, invalidJson);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("must connect an actor with a use case"));
-    }
-
-    [Fact]
-    [Trait("BR", "BR-20")]
-    public async Task ValidateDiagram_IncludeCycle_ReturnsError()
-    {
-        var cycleJson = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""Customer""],
-            ""useCases"": [""UC1"", ""UC2""],
-            ""relations"": [
-                { ""from"": ""Customer"", ""to"": ""UC1"", ""type"": ""association"" },
-                { ""from"": ""UC1"", ""to"": ""UC2"", ""type"": ""include"" },
-                { ""from"": ""UC2"", ""to"": ""UC1"", ""type"": ""include"" }
-            ]
-        }";
-
-        var result = await _engineClient.ValidateDiagramAsync(DiagramType.UseCase, cycleJson);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("must not form a cycle"));
-    }
-
-    [Fact]
-    [Trait("BR", "BR-21")]
-    public async Task ValidateDiagram_SequenceWithInsufficientParticipants_ReturnsError()
-    {
-        var invalidSeq = @"{
-            ""participants"": [""User""],
-            ""messages"": []
-        }";
-
-        var result = await _engineClient.ValidateDiagramAsync(DiagramType.Sequence, invalidSeq);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("at least two participants"));
-    }
-
-    [Fact]
-    public async Task SuggestRelations_UnconnectedActor_ReturnsSuggestion()
-    {
-        var jsonWithOrphanActor = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""ConnectedActor"", ""OrphanActor""],
-            ""useCases"": [""Login""],
-            ""relations"": [
-                { ""from"": ""ConnectedActor"", ""to"": ""Login"", ""type"": ""association"" }
-            ]
-        }";
-
-        var suggestions = await _engineClient.SuggestRelationsAsync(DiagramType.UseCase, jsonWithOrphanActor);
-
-        suggestions.Should().Contain(s => s.From == "OrphanActor" && s.To == "Login");
+        suggestions.Should().BeEmpty();
     }
 
     [Fact]
@@ -154,21 +87,20 @@ public class DiagramEngineClientTests
         });
         await _memberAccessRepository.SaveChangesAsync();
 
-        var invalidUmlJson = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""Actor1"", ""Actor2""],
-            ""useCases"": [""UseCase1""],
-            ""relations"": [
-                { ""from"": ""Actor1"", ""to"": ""Actor2"", ""type"": ""association"" }
-            ]
-        }";
+        _engineClientMock
+            .Setup(c => c.ValidateDiagramAsync(It.IsAny<DiagramType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiagramValidationResult
+            {
+                IsValid = false,
+                Errors = new List<string> { "Association between two actors is invalid." }
+            });
 
         var request = new CreateDiagramRequest
         {
             ProjectId = _testProjectId,
             Type = DiagramType.UseCase,
             Title = "Invalid UML Diagram",
-            ModelJson = invalidUmlJson
+            ModelJson = "{}"
         };
 
         var act = () => _service.CreateDiagramAsync(request);
@@ -188,26 +120,21 @@ public class DiagramEngineClientTests
             Role = ProjectRole.Member
         });
 
-        var validJson = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""User""],
-            ""useCases"": [""Browse""],
-            ""relations"": [
-                { ""from"": ""User"", ""to"": ""Browse"", ""type"": ""association"" }
-            ]
-        }";
-
         var diagram = new Repositories.Entities.Diagram
         {
             Id = Guid.NewGuid(),
             ProjectId = _testProjectId,
             Type = DiagramType.UseCase,
             Title = "Valid Diagram",
-            ModelJson = validJson,
+            ModelJson = "{}",
             CreatedBy = _testUserId
         };
         await _diagramRepository.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
+
+        _engineClientMock
+            .Setup(c => c.ValidateDiagramAsync(diagram.Type, diagram.ModelJson, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiagramValidationResult { IsValid = true });
 
         var result = await _service.ValidateDiagramAsync(diagram.Id);
 
@@ -225,26 +152,24 @@ public class DiagramEngineClientTests
             Role = ProjectRole.Member
         });
 
-        var validJson = @"{
-            ""systemBoundary"": ""System"",
-            ""actors"": [""User""],
-            ""useCases"": [""Browse""],
-            ""relations"": [
-                { ""from"": ""User"", ""to"": ""Browse"", ""type"": ""association"" }
-            ]
-        }";
-
         var diagram1 = new Repositories.Entities.Diagram
         {
             Id = Guid.NewGuid(),
             ProjectId = _testProjectId,
             Type = DiagramType.UseCase,
             Title = "D1",
-            ModelJson = validJson,
+            ModelJson = "{}",
             CreatedBy = _testUserId
         };
         await _diagramRepository.AddAsync(diagram1);
         await _dbContext.SaveChangesAsync();
+
+        _engineClientMock
+            .Setup(c => c.ValidateProjectAsync(It.IsAny<IEnumerable<(Guid, DiagramType, string)>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ProjectDiagramValidationResult>
+            {
+                new() { DiagramId = diagram1.Id, IsValid = true }
+            });
 
         var results = await _service.ValidateProjectAsync(_testProjectId);
 

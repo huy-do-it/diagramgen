@@ -4,7 +4,7 @@ using Moq;
 using UMLForge.Diagram.API.Controllers;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Service.DTOs;
-using UMLForge.Diagram.Service.Exceptions;
+using UMLForge.BuildingBlocks.Web;
 using UMLForge.Diagram.Service.Interfaces;
 
 namespace UMLForge.Diagram.Tests;
