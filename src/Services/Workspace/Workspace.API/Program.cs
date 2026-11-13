@@ -61,24 +61,24 @@ app.UseUmlForgeDefaults();
 // Standard job trigger endpoints: GET /api/admin/workspace/jobs & POST /api/admin/workspace/jobs/{jobName}/run
 app.MapJobTriggerEndpoint("workspace");
 
-// Auto migration for development
-if (app.Environment.IsDevelopment())
+// Apply database migrations on startup (unconditional for relational databases; fail-fast if broken)
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<WorkspaceDbContext>();
     if (dbContext.Database.IsRelational())
     {
         try
         {
-            await dbContext.Database.MigrateAsync();
+            await dbContext.Database.MigrateAsync(app.Lifetime.ApplicationStopping);
         }
         catch (Exception ex)
         {
-            app.Logger.LogWarning(ex, "Could not apply database migrations on startup.");
+            app.Logger.LogCritical(ex, "Workspace schema migration failed; startup aborted.");
+            throw;
         }
     }
 }
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }
