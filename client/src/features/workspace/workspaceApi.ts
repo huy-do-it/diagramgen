@@ -33,8 +33,8 @@ export const workspaceApi = {
     return apiRequest<PagedResult<ProjectSummary>>(endpoint);
   },
 
-  async getProject(id: string): Promise<{ project: ProjectDetail; etag: string | null }> {
-    const response = await apiFetch(`/projects/${id}`);
+  async getProject(id: string, signal?: AbortSignal): Promise<{ project: ProjectDetail; etag: string | null }> {
+    const response = await apiFetch(`/projects/${id}`, { signal });
     const etag = response.headers.get('ETag');
     const project = (await response.json()) as ProjectDetail;
     return { project, etag };
