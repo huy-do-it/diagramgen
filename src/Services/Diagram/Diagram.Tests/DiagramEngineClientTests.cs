@@ -176,4 +176,148 @@ public class DiagramEngineClientTests
         results.Should().HaveCount(1);
         results.First().IsValid.Should().BeTrue();
     }
+
+    private static AsyncUnaryCall<T> MakeCall<T>(T response)
+    {
+        return new AsyncUnaryCall<T>(
+            Task.FromResult(response),
+            Task.FromResult(new Metadata()),
+            () => Status.DefaultSuccess,
+            () => new Metadata(),
+            () => { });
+    }
+
+    private static AsyncUnaryCall<T> MakeThrowingCall<T>(RpcException ex)
+    {
+        return new AsyncUnaryCall<T>(
+            Task.FromException<T>(ex),
+            Task.FromResult(new Metadata()),
+            () => ex.Status,
+            () => new Metadata(),
+            () => { });
+    }
+
+    [Fact]
+    public async Task GrpcDiagramEngineClient_Success_ReturnsValidationResult()
+    {
+        var grpcClientMock = new Mock<DiagramEngineService.DiagramEngineServiceClient>();
+        var loggerMock = new Mock<ILogger<GrpcDiagramEngineClient>>();
+
+        grpcClientMock
+            .Setup(c => c.ValidateDiagramAsync(
+                It.IsAny<DiagramValidationRequest>(),
+                It.IsAny<Metadata>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(MakeCall(new DiagramValidationResponse { IsValid = true }));
+
+        var client = new GrpcDiagramEngineClient(grpcClientMock.Object, loggerMock.Object);
+        var result = await client.ValidateDiagramAsync(DiagramType.UseCase, "{}");
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GrpcDiagramEngineClient_Unavailable_RetriesAndThrows503WhenExhausted()
+    {
+        var grpcClientMock = new Mock<DiagramEngineService.DiagramEngineServiceClient>();
+        var loggerMock = new Mock<ILogger<GrpcDiagramEngineClient>>();
+        var attempts = 0;
+
+        grpcClientMock
+            .Setup(c => c.ValidateDiagramAsync(
+                It.IsAny<DiagramValidationRequest>(),
+                It.IsAny<Metadata>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                attempts++;
+                return MakeThrowingCall<DiagramValidationResponse>(
+                    new RpcException(new Status(StatusCode.Unavailable, "Engine unreachable")));
+            });
+
+        var client = new GrpcDiagramEngineClient(grpcClientMock.Object, loggerMock.Object);
+        var act = () => client.ValidateDiagramAsync(DiagramType.UseCase, "{}");
+
+        var ex = await act.Should().ThrowAsync<BusinessRuleException>();
+        ex.Which.Status.Should().Be(503);
+        ex.Which.Code.Should().Be("BR-503");
+        attempts.Should().Be(3); // 1 initial + 2 retries = 3 attempts
+    }
+
+    [Fact]
+    public async Task GrpcDiagramEngineClient_Cancelled_ThrowsOperationCanceledException()
+    {
+        var grpcClientMock = new Mock<DiagramEngineService.DiagramEngineServiceClient>();
+        var loggerMock = new Mock<ILogger<GrpcDiagramEngineClient>>();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var client = new GrpcDiagramEngineClient(grpcClientMock.Object, loggerMock.Object);
+        var act = () => client.ValidateDiagramAsync(DiagramType.UseCase, "{}", cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task GrpcDiagramEngineClient_DeadlineExceeded_Throws503WithoutRetrying()
+    {
+        var grpcClientMock = new Mock<DiagramEngineService.DiagramEngineServiceClient>();
+        var loggerMock = new Mock<ILogger<GrpcDiagramEngineClient>>();
+        var attempts = 0;
+
+        grpcClientMock
+            .Setup(c => c.ValidateDiagramAsync(
+                It.IsAny<DiagramValidationRequest>(),
+                It.IsAny<Metadata>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                attempts++;
+                return MakeThrowingCall<DiagramValidationResponse>(
+                    new RpcException(new Status(StatusCode.DeadlineExceeded, "Deadline passed")));
+            });
+
+        var client = new GrpcDiagramEngineClient(grpcClientMock.Object, loggerMock.Object);
+        var act = () => client.ValidateDiagramAsync(DiagramType.UseCase, "{}");
+
+        var ex = await act.Should().ThrowAsync<BusinessRuleException>();
+        ex.Which.Status.Should().Be(503);
+        ex.Which.Code.Should().Be("BR-503");
+        attempts.Should().Be(1); // DeadlineExceeded does not retry, fails immediately
+    }
+
+    [Fact]
+    public async Task GrpcDiagramEngineClient_AttachesCorrelationHeader()
+    {
+        var grpcClientMock = new Mock<DiagramEngineService.DiagramEngineServiceClient>();
+        var loggerMock = new Mock<ILogger<GrpcDiagramEngineClient>>();
+        Metadata? capturedMetadata = null;
+
+        grpcClientMock
+            .Setup(c => c.ValidateDiagramAsync(
+                It.IsAny<DiagramValidationRequest>(),
+                It.IsAny<Metadata>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<DiagramValidationRequest, Metadata, DateTime?, CancellationToken>((_, meta, _, _) =>
+            {
+                capturedMetadata = meta;
+            })
+            .Returns(MakeCall(new DiagramValidationResponse { IsValid = true }));
+
+        var expectedCorrelationId = Guid.NewGuid();
+        using (UMLForge.Contracts.Events.CorrelationContext.Begin(expectedCorrelationId, "test-op"))
+        {
+            var client = new GrpcDiagramEngineClient(grpcClientMock.Object, loggerMock.Object);
+            await client.ValidateDiagramAsync(DiagramType.UseCase, "{}");
+        }
+
+        capturedMetadata.Should().NotBeNull();
+        var entry = capturedMetadata!.FirstOrDefault(e => e.Key == UMLForge.Contracts.Events.CorrelationKeys.GrpcMetadata);
+        entry.Should().NotBeNull();
+        entry!.Value.Should().Be(expectedCorrelationId.ToString());
+    }
 }

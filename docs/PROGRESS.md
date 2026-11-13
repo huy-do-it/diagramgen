@@ -140,7 +140,7 @@ Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “ch
 
 | # | Mô tả | Mức độ | Service | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| INT-M01 | Diagram phát RenderRequested.DiagramType dạng chuỗi, shared contract của Render yêu cầu int1..5 | Chặn WF-02 | Diagram → Render | Đã tái hiện; chờ phối hợp Thiện/Bảo/Minh | Snapshot `81badf9`; decoder thật báo JsonException tại Payload.DiagramType. Không thay contract Render để nhận payload sai. |
+| INT-M01 | Diagram phát RenderRequested.DiagramType dạng chuỗi, shared contract của Render yêu cầu int 1..5 | Chặn WF-02 | Diagram → Render | Đã sửa | Thiện đã sửa phát int 1..5 khớp shared contract; 65/65 unit tests PASS. |
 | INT-M02 | Cùng diagram/version qua nhiều lần retry chưa có attempt sequence trong event; recipient read model đa stream có độ trễ | Cần kiểm khi ghép | Render / Diagram / Notification | Mở | Không tự đổi shared contract; kiểm kết quả attempt cũ và membership thay đổi đồng thời. |
 | INT-M03 | Chưa đủ đường chạy Engine/Gateway/Compose và API job chung cho UI-11 | Chặn nghiệm thu chung | Toàn hệ thống | Chờ phần publish/tích hợp của nhóm | Root Compose config từng lỗi tại `81badf9`; với phần hạ tầng PR #14 đã PASS config, Engine thật đã có. Gateway và Identity GET job list/response chuẩn vẫn cần ghép. Không suy ra 11 container/WF acceptance từ config PASS. |
 
@@ -203,6 +203,17 @@ Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “ch
 ---
 
 ## 8. Nhật ký
+
+### 13/11/2026 — Thiện
+- Xong:
+  1. Tắt Fake Diagram Engine (`UseFake=false` ở cả appsettings.json, appsettings.Development.json và deploy/compose/diagram.yml); từ chối UML sai bằng Engine thật (HTTP 422 BR-UML).
+  2. Bỏ project cố định, role switcher và dev-session fallback trong UI Diagram (`diagramApi.ts`, `routes.tsx`); tích hợp session chung, routing động theo dự án (`projects/:projectId/diagrams`, `projects/:projectId/reviews`), kiểm quyền bằng backend API thật.
+  3. Hoàn thiện gRPC client Diagram (`GrpcDiagramEngineClient`): cấu hình deadline 5s, retry tối đa 2 lần chỉ với lỗi `Unavailable` (tổng 3 attempts), truyền `x-correlation-id`, ném HTTP 503 BR-503 khi hết lượt/timeout, giữ nguyên cancellation (`OperationCanceledException`).
+  4. Khép migration drift Diagram sau khi chuyển sang shared Outbox/Inbox (`20261113050716_SyncSharedOutboxInbox.cs`): `dotnet ef migrations has-pending-model-changes` trả về sạch 0 drift.
+  5. Sửa lỗi payload RenderRequested (DiagramType int 1..5, giải quyết INT-M01) và consumer recovery. Build Release & 65/65 unit tests PASS.
+- Build & Test: `dotnet test src/Services/Diagram/Diagram.sln` 65/65 PASS; `npm --prefix client run check && npm --prefix client run build` PASS (0 errors); `dotnet publish` Release PASS.
+- Bị chặn bởi: Không.
+- Tiếp theo: Phối hợp I-01..I-06 tích hợp toàn hệ thống.
 
 ### 12/11/2026 — Minh
 - Xong: triển khai và bàn giao M-01–M-07; PR #1/#2/#4/#5/#6/#8/#10 đã merge vào develop. M-07 commit `d6ad67a`, merge `761f0ed`.

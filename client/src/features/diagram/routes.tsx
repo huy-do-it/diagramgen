@@ -1,133 +1,41 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
-import { Route } from 'react-router';
+import { Route, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useAuth } from '../../auth/AuthContext';
 import { DiagramViewPage } from './DiagramViewPage';
 import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
-import { diagramApi, DEV_TOKENS, ensureDevSession } from './diagramApi';
-import { saveSession } from '../../auth/session';
+import { diagramApi } from './diagramApi';
 import { DiagramType } from './types';
 
-const DEFAULT_PROJECT_ID = '00000000-0000-0000-0000-000000000001';
-
 export const diagramRoutes: ReactElement[] = [
-  <Route
-    key="diagram-list"
-    path="diagrams"
-    element={<DiagramStudioLayout><DiagramListWrapper /></DiagramStudioLayout>}
-  />,
-  <Route
-    key="diagram-view"
-    path="diagrams/:diagramId"
-    element={<DiagramStudioLayout><DiagramViewWrapper /></DiagramStudioLayout>}
-  />,
-  <Route
-    key="diagram-review"
-    path="reviews"
-    element={<DiagramStudioLayout><ReviewPanelWrapper /></DiagramStudioLayout>}
-  />,
+  <Route key="diagram-list" path="diagrams" element={<DiagramListWrapper />} />,
+  <Route key="project-diagram-list" path="projects/:projectId/diagrams" element={<DiagramListWrapper />} />,
+  <Route key="diagram-view" path="diagrams/:diagramId" element={<DiagramViewWrapper />} />,
+  <Route key="diagram-review" path="reviews" element={<ReviewPanelWrapper />} />,
+  <Route key="project-diagram-review" path="projects/:projectId/reviews" element={<ReviewPanelWrapper />} />,
 ];
 
-function DiagramStudioLayout({ children }: { children: React.ReactNode }) {
-  const [currentRole, setCurrentRole] = useState<'Leader' | 'Lecturer' | 'Member'>(() => {
-    const saved = localStorage.getItem('currentRole');
-    const role = (saved as 'Leader' | 'Lecturer' | 'Member') || 'Leader';
-    ensureDevSession(role);
-    return role;
+function DiagramListWrapper() {
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [projectIdInput, setProjectIdInput] = useState(() => {
+    return routeProjectId || searchParams.get('projectId') || sessionStorage.getItem('currentProjectId') || '';
   });
 
-  const handleRoleChange = (role: 'Leader' | 'Lecturer' | 'Member') => {
-    setCurrentRole(role);
-    localStorage.setItem('currentRole', role);
-    saveSession(DEV_TOKENS[role], 'dev-refresh-token', 86400 * 30);
-    window.location.reload();
+  const effectiveProjectId = routeProjectId || searchParams.get('projectId') || sessionStorage.getItem('currentProjectId') || '';
+
+  const handleSetProject = (id: string) => {
+    const trimmed = id.trim();
+    if (trimmed) {
+      sessionStorage.setItem('currentProjectId', trimmed);
+      setSearchParams({ projectId: trimmed });
+    }
   };
 
-  const currentPath = window.location.pathname;
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
-      {/* Top Navigation Bar */}
-      <header style={{
-        background: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
-        padding: '12px 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => { window.location.href = '/diagrams'; }}>
-            <span style={{ fontSize: '24px' }}>📐</span>
-            <span style={{ fontWeight: 700, fontSize: '18px', color: '#1e40af' }}>UMLForge Diagram Studio</span>
-          </div>
-
-          <nav style={{ display: 'flex', gap: '8px' }}>
-            <a
-              href="/diagrams"
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                textDecoration: 'none',
-                fontWeight: 500,
-                fontSize: '14px',
-                background: currentPath.startsWith('/diagrams') && !currentPath.includes('/diagrams/') ? '#eff6ff' : 'transparent',
-                color: currentPath.startsWith('/diagrams') && !currentPath.includes('/diagrams/') ? '#1d4ed8' : '#64748b'
-              }}
-            >
-              📋 Danh sách Sơ đồ
-            </a>
-            <a
-              href="/reviews"
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                textDecoration: 'none',
-                fontWeight: 500,
-                fontSize: '14px',
-                background: currentPath.startsWith('/reviews') ? '#eff6ff' : 'transparent',
-                color: currentPath.startsWith('/reviews') ? '#1d4ed8' : '#64748b'
-              }}
-            >
-              ⚖️ Thẩm định & Review
-            </a>
-          </nav>
-        </div>
-
-        {/* Role Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>Vai trò hiện tại:</span>
-          <select
-            id="role-switcher"
-            value={currentRole}
-            onChange={(e) => handleRoleChange(e.target.value as any)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: currentRole === 'Leader' ? '#1d4ed8' : currentRole === 'Lecturer' ? '#7c3aed' : '#059669'
-            }}
-          >
-            <option value="Leader">👑 Sinh viên Trưởng nhóm (Leader)</option>
-            <option value="Lecturer">🎓 Giảng viên Thẩm định (Lecturer)</option>
-            <option value="Member">👤 Sinh viên Thành viên (Member)</option>
-          </select>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
-        {children}
-      </main>
-    </div>
-  );
-}
-
-function DiagramListWrapper() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState('CampusEats Order Management');
   const [newType, setNewType] = useState<DiagramType>(DiagramType.UseCase);
@@ -143,23 +51,26 @@ function DiagramListWrapper() {
 }`);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const currentRole = localStorage.getItem('currentRole') || 'Leader';
-  const canEdit = currentRole !== 'Lecturer';
+  const canEdit = user?.role !== 'Lecturer';
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!effectiveProjectId) {
+      setCreateError('Vui lòng chọn hoặc nhập Project ID trước khi tạo sơ đồ.');
+      return;
+    }
     try {
       setCreateError(null);
       const created = await diagramApi.createDiagram({
-        projectId: DEFAULT_PROJECT_ID,
+        projectId: effectiveProjectId,
         type: newType,
         title: newTitle,
         modelJson: newJson,
       });
       setShowCreateModal(false);
-      window.location.href = `/diagrams/${created.id}`;
-    } catch (err: any) {
-      setCreateError(err.message || 'Không thể tạo sơ đồ.');
+      navigate(`/diagrams/${created.id}`);
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : 'Không thể tạo sơ đồ.');
     }
   };
 
@@ -175,12 +86,83 @@ function DiagramListWrapper() {
 }`);
   };
 
+  if (!effectiveProjectId) {
+    return (
+      <div style={{ padding: '32px', maxWidth: '640px', margin: '40px auto', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '28px' }}>📐</span>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Quản lý Sơ đồ Dự án</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>Nhập mã dự án để tải danh sách sơ đồ và thẩm định</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+          <input
+            type="text"
+            placeholder="Nhập Project ID (UUID)..."
+            value={projectIdInput}
+            onChange={(e) => setProjectIdInput(e.target.value)}
+            style={{ flex: 1, padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' }}
+          />
+          <button
+            type="button"
+            onClick={() => handleSetProject(projectIdInput)}
+            style={{ padding: '10px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px' }}
+          >
+            Mở Sơ đồ
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div style={{ padding: '16px 0' }}>
+      {/* Top Project Context Bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '12px 16px',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '18px' }}>📁</span>
+          <div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Dự án:</span>
+            <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '14px', color: '#1e293b' }}>{effectiveProjectId}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${effectiveProjectId}/reviews`)}
+            style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+          >
+            ⚖️ Thẩm định & Review
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem('currentProjectId');
+              setSearchParams({});
+            }}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}
+          >
+            Đổi dự án
+          </button>
+        </div>
+      </div>
+
       <DiagramListPanel
-        projectId={DEFAULT_PROJECT_ID}
+        projectId={effectiveProjectId}
         canEdit={canEdit}
-        onSelectDiagram={(id) => { window.location.href = `/diagrams/${id}`; }}
+        onSelectDiagram={(id) => { navigate(`/diagrams/${id}`); }}
         onCreateNew={() => setShowCreateModal(true)}
       />
 
@@ -291,31 +273,128 @@ function DiagramListWrapper() {
 }
 
 function DiagramViewWrapper() {
-  const segments = window.location.pathname.split('/');
-  const diagramId = segments[segments.length - 1] || '';
-  const currentRole = localStorage.getItem('currentRole') || 'Leader';
-  const canEdit = currentRole !== 'Lecturer';
+  const { diagramId } = useParams<{ diagramId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEdit = user?.role !== 'Lecturer';
 
   return (
     <DiagramViewPage
-      diagramId={diagramId}
+      diagramId={diagramId || ''}
       canEdit={canEdit}
-      onBack={() => { window.location.href = '/diagrams'; }}
+      onBack={() => {
+        const storedProjectId = sessionStorage.getItem('currentProjectId');
+        if (storedProjectId) {
+          navigate(`/projects/${storedProjectId}/diagrams`);
+        } else {
+          navigate('/diagrams');
+        }
+      }}
     />
   );
 }
 
 function ReviewPanelWrapper() {
-  const currentRole = localStorage.getItem('currentRole') || 'Leader';
-  const isLeader = currentRole === 'Leader';
-  const isLecturer = currentRole === 'Lecturer';
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const [projectIdInput, setProjectIdInput] = useState(() => {
+    return routeProjectId || searchParams.get('projectId') || sessionStorage.getItem('currentProjectId') || '';
+  });
+
+  const effectiveProjectId = routeProjectId || searchParams.get('projectId') || sessionStorage.getItem('currentProjectId') || '';
+
+  const handleSetProject = (id: string) => {
+    const trimmed = id.trim();
+    if (trimmed) {
+      sessionStorage.setItem('currentProjectId', trimmed);
+      setSearchParams({ projectId: trimmed });
+    }
+  };
+
+  const isLecturer = user?.role === 'Lecturer';
+  const isLeader = user?.role === 'Student';
+
+  if (!effectiveProjectId) {
+    return (
+      <div style={{ padding: '32px', maxWidth: '640px', margin: '40px auto', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '28px' }}>⚖️</span>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Thẩm định & Review Dự án</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>Nhập mã dự án để xem hoặc gửi thẩm định kết quả sơ đồ</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+          <input
+            type="text"
+            placeholder="Nhập Project ID (UUID)..."
+            value={projectIdInput}
+            onChange={(e) => setProjectIdInput(e.target.value)}
+            style={{ flex: 1, padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' }}
+          />
+          <button
+            type="button"
+            onClick={() => handleSetProject(projectIdInput)}
+            style={{ padding: '10px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '14px' }}
+          >
+            Mở Review
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <ReviewPanel
-      projectId={DEFAULT_PROJECT_ID}
-      isLeader={isLeader}
-      isLecturer={isLecturer}
-    />
+    <div style={{ padding: '16px 0' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '12px 16px',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '18px' }}>📁</span>
+          <div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Dự án:</span>
+            <div style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '14px', color: '#1e293b' }}>{effectiveProjectId}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${effectiveProjectId}/diagrams`)}
+            style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+          >
+            📋 Xem Sơ đồ
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem('currentProjectId');
+              setSearchParams({});
+            }}
+            style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}
+          >
+            Đổi dự án
+          </button>
+        </div>
+      </div>
+
+      <ReviewPanel
+        projectId={effectiveProjectId}
+        isLeader={isLeader}
+        isLecturer={isLecturer}
+      />
+    </div>
   );
 }
 

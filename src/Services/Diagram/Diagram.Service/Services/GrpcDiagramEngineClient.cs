@@ -1,17 +1,21 @@
+using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using UMLForge.BuildingBlocks.Web;
+using UMLForge.Contracts.Events;
 using UMLForge.Contracts.Grpc;
 using UMLForge.Diagram.Repositories.Enums;
 using UMLForge.Diagram.Service.Interfaces;
 using UMLForge.Diagram.Service.Models.Validation;
-using RelationSuggestion = UMLForge.Diagram.Service.Models.Validation.RelationSuggestion;
 using ModelRelationSuggestion = UMLForge.Diagram.Service.Models.Validation.RelationSuggestion;
 
 namespace UMLForge.Diagram.Service.Services;
 
 public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
 {
+    private const int MaxUnavailableRetries = 2;
+    private static readonly TimeSpan DefaultDeadline = TimeSpan.FromSeconds(5);
+
     private readonly DiagramEngineService.DiagramEngineServiceClient _client;
     private readonly ILogger<GrpcDiagramEngineClient> _logger;
 
@@ -28,7 +32,7 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
         string modelJson,
         CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteWithRetryAsync(async headers =>
         {
             var request = new DiagramValidationRequest
             {
@@ -38,7 +42,8 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
 
             using var call = _client.ValidateDiagramAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(5),
+                headers: headers,
+                deadline: DateTime.UtcNow.Add(DefaultDeadline),
                 cancellationToken: cancellationToken);
 
             var response = await call.ResponseAsync;
@@ -48,15 +53,7 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
                 Errors = response.Errors.ToList(),
                 Warnings = response.Warnings.ToList()
             };
-        }
-        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
-        {
-            _logger.LogWarning(ex, "DiagramEngine gRPC service is unavailable or deadline exceeded.");
-            throw new BusinessRuleException(
-                "BR-503",
-                "Dịch vụ kiểm tra UML tạm thời không phản hồi. Vui lòng thử lại sau.",
-                503);
-        }
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ModelRelationSuggestion>> SuggestRelationsAsync(
@@ -64,7 +61,7 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
         string modelJson,
         CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteWithRetryAsync(async headers =>
         {
             var request = new RelationSuggestionRequest
             {
@@ -74,32 +71,25 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
 
             using var call = _client.SuggestRelationsAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(5),
+                headers: headers,
+                deadline: DateTime.UtcNow.Add(DefaultDeadline),
                 cancellationToken: cancellationToken);
 
             var response = await call.ResponseAsync;
-            return response.Suggestions.Select(s => new ModelRelationSuggestion
+            return (IReadOnlyList<ModelRelationSuggestion>)response.Suggestions.Select(s => new ModelRelationSuggestion
             {
                 From = s.From,
                 To = s.To,
                 Description = s.Description
             }).ToList();
-        }
-        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
-        {
-            _logger.LogWarning(ex, "DiagramEngine gRPC service is unavailable or deadline exceeded.");
-            throw new BusinessRuleException(
-                "BR-503",
-                "Dịch vụ kiểm tra UML tạm thời không phản hồi. Vui lòng thử lại sau.",
-                503);
-        }
+        }, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProjectDiagramValidationResult>> ValidateProjectAsync(
         IEnumerable<(Guid DiagramId, DiagramType Type, string ModelJson)> diagrams,
         CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteWithRetryAsync(async headers =>
         {
             var request = new ProjectValidationRequest();
             foreach (var (diagramId, type, modelJson) in diagrams)
@@ -114,7 +104,8 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
 
             using var call = _client.ValidateProject(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(10),
+                headers: headers,
+                deadline: DateTime.UtcNow.Add(DefaultDeadline),
                 cancellationToken: cancellationToken);
 
             var results = new List<ProjectDiagramValidationResult>();
@@ -132,15 +123,55 @@ public sealed class GrpcDiagramEngineClient : IDiagramEngineClient
                     });
                 }
             }
-            return results;
-        }
-        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+            return (IReadOnlyList<ProjectDiagramValidationResult>)results;
+        }, cancellationToken);
+    }
+
+    private async Task<T> ExecuteWithRetryAsync<T>(Func<Metadata, Task<T>> action, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt <= MaxUnavailableRetries; attempt++)
         {
-            _logger.LogWarning(ex, "DiagramEngine gRPC service is unavailable or deadline exceeded.");
-            throw new BusinessRuleException(
-                "BR-503",
-                "Dịch vụ kiểm tra UML tạm thời không phản hồi. Vui lòng thử lại sau.",
-                503);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var headers = CreateHeaders();
+                return await action(headers);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable && attempt < MaxUnavailableRetries)
+            {
+                _logger.LogWarning(ex, "DiagramEngine gRPC Unavailable on attempt {Attempt}/{MaxRetries}. Retrying...", attempt + 1, MaxUnavailableRetries);
+                await Task.Delay(100 * (1 << attempt), cancellationToken);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("DiagramEngine gRPC call was cancelled.");
+                throw;
+            }
+            catch (RpcException ex) when (ex.StatusCode is StatusCode.Unavailable or StatusCode.DeadlineExceeded)
+            {
+                _logger.LogWarning(ex, "DiagramEngine gRPC service call failed with {StatusCode} after {Attempt} attempts.", ex.StatusCode, attempt + 1);
+                throw new BusinessRuleException(
+                    "BR-503",
+                    "Dịch vụ kiểm tra UML tạm thời không phản hồi. Vui lòng thử lại sau.",
+                    503);
+            }
         }
+
+        throw new BusinessRuleException(
+            "BR-503",
+            "Dịch vụ kiểm tra UML tạm thời không phản hồi. Vui lòng thử lại sau.",
+            503);
+    }
+
+    private static Metadata CreateHeaders()
+    {
+        var headers = new Metadata();
+        var correlation = CorrelationContext.Current?.ToString() ?? Activity.Current?.TraceId.ToString();
+        if (!string.IsNullOrEmpty(correlation))
+        {
+            headers.Add(CorrelationKeys.GrpcMetadata, correlation);
+        }
+        return headers;
     }
 }

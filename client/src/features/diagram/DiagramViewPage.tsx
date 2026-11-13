@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
-import { useRenderStatus } from './useRenderStatus';
+import { useRenderStatus } from '../../shared/useRenderStatus';
+import type { RenderSnapshot } from '../../shared/useRenderStatus';
 
 interface DiagramViewPageProps {
   diagramId: string;
@@ -39,6 +40,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
     try {
       const { diagram: data } = await diagramApi.getDiagramById(diagramId);
       setDiagram(data);
+      if (data?.projectId) {
+        sessionStorage.setItem('currentProjectId', data.projectId);
+      }
       return data;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Không thể tải thông tin sơ đồ.');
@@ -70,22 +74,42 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, onB
     Promise.all([fetchDiagram(), fetchVersions(), fetchComments()]).finally(() => setLoading(false));
   }, [fetchDiagram, fetchVersions, fetchComments]);
 
-  // Polling hook when status is Pending or Rendering (every 2s)
-  useRenderStatus({
-    status: diagram?.status,
-    onRefresh: async () => {
-      const updated = await fetchDiagram();
-      if (updated?.status === 'Rendered' || updated?.status === 'Failed') {
-        fetchVersions();
-      }
-    },
-    intervalMs: 2000,
-  });
+  const initialSnapshot = useMemo<RenderSnapshot | null>(() => {
+    if (!diagram) return null;
+    return {
+      status: diagram.status,
+      svg: diagram.svgXml ?? null,
+      plantUml: diagram.plantUml ?? null,
+      error: diagram.lastError ?? null,
+      version: diagram.currentVersion,
+      renderedAt: diagram.renderedAt ?? null,
+      etag: diagram.eTag ?? null,
+    };
+  }, [diagram?.id]);
+
+  const renderState = useRenderStatus(diagramId, initialSnapshot);
+
+  useEffect(() => {
+    if (!renderState.snapshot) return;
+    setDiagram(prev => prev ? {
+      ...prev,
+      status: renderState.snapshot!.status,
+      svgXml: renderState.snapshot!.svg,
+      plantUml: renderState.snapshot!.plantUml,
+      lastError: renderState.snapshot!.error,
+      currentVersion: renderState.snapshot!.version,
+      renderedAt: renderState.snapshot!.renderedAt,
+      eTag: renderState.snapshot!.etag,
+    } : null);
+    if (renderState.snapshot.status === 'Rendered' || renderState.snapshot.status === 'Failed') {
+      fetchVersions();
+    }
+  }, [renderState.snapshot, fetchVersions]);
 
   const handleRender = async () => {
     try {
       await diagramApi.requestRender(diagramId);
-      fetchDiagram();
+      renderState.track();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.');
     }
