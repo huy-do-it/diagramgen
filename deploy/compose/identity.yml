@@ -3,11 +3,13 @@ services:
     build:
       context: ../../src
       dockerfile: Services/Identity/Identity.API/Dockerfile
+      args:
+        REVISION: ${GIT_COMMIT:-local-dev}
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Default: Server=sqlserver,1433;Database=IdentityDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=IdentityDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: ${REDIS_URL}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__SecretKey: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
     ports:

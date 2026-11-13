@@ -2,12 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Identity.Repositories.Data;
+using UMLForge.BuildingBlocks.Jobs;
 
 namespace Identity.Service.Jobs;
 
 public class PurgeRefreshTokensJob : ScheduledJobBase
 {
-    public override string JobName => "purge-tokens";
+    public override string JobName => "purge-refresh-tokens";
     protected override TimeSpan Interval => TimeSpan.FromHours(6);
     protected override bool RunOnStartup => false;
 

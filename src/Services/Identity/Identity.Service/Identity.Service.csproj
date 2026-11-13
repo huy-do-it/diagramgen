@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Identity.Repositories\Identity.Repositories.csproj" />
     <ProjectReference Include="..\..\..\Contracts\UMLForge.Contracts.Events\UMLForge.Contracts.Events.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\UMLForge.BuildingBlocks.Jobs\UMLForge.BuildingBlocks.Jobs.csproj" />
   </ItemGroup>
 
 </Project>
