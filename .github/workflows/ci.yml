@@ -1,4 +1,5 @@
-# CI UMLForge v2: mỗi .sln trong src/ là 1 job riêng (tự phát hiện, ai thêm service mới không cần sửa file này)
+# CI UMLForge v2: mỗi .sln (và mỗi .csproj không thuộc .sln nào, ví dụ Gateway) trong src/ là 1 job riêng
+# (tự phát hiện, ai thêm service mới không cần sửa file này)
 # + build client + kiểm tra cấu hình Docker Compose. Không merge khi CI đỏ (RULES §8).
 name: CI
 
@@ -14,7 +15,7 @@ concurrency:
 
 jobs:
   discover:
-    name: Tìm các solution
+    name: Tìm các solution / project
     runs-on: ubuntu-latest
     outputs:
       solutions: ${{ steps.find.outputs.solutions }}
@@ -22,9 +23,14 @@ jobs:
       - uses: actions/checkout@v4
       - id: find
         run: |
-          solutions=$(find src -name '*.sln' -not -path '*/bin/*' -not -path '*/obj/*' | sort | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "Solutions: $solutions"
-          echo "solutions=$solutions" >> "$GITHUB_OUTPUT"
+          solutions=$(find src -name '*.sln' -not -path '*/bin/*' -not -path '*/obj/*' | sort)
+          # Project không nằm trong .sln nào (hiện là Gateway) → build/test riêng file .csproj
+          orphans=$(find src -name '*.csproj' -not -path '*/bin/*' -not -path '*/obj/*' | sort | while read -r project; do
+            grep -qF "$(basename "$project")" $solutions || echo "$project"
+          done)
+          targets=$(printf '%s\n%s\n' "$solutions" "$orphans" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "Solutions/projects: $targets"
+          echo "solutions=$targets" >> "$GITHUB_OUTPUT"
 
   dotnet:
     name: dotnet (${{ matrix.solution }})
