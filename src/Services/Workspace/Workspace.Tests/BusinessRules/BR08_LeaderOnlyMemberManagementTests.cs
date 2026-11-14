@@ -43,6 +43,7 @@ public class BR08_LeaderOnlyMemberManagementTests
 
         _projectService = new ProjectService(
             _projectRepo,
+            _userDirectoryRepo,
             _outboxMock.Object,
             _currentUserMock.Object,
             new CreateProjectRequestValidator(),

@@ -112,8 +112,9 @@ public class UserDirectoryService : IUserDirectoryService
 
         await _projectRepo.SaveChangesAsync(ct);
 
+        var directory = await _userDirectoryRepo.GetByIdsAsync(project.Members.Select(m => m.UserId), ct);
         var memberDtos = project.Members
-            .Select(m => new ProjectMemberResponse(m.UserId, m.Role, m.JoinedAt))
+            .Select(m => ProjectMemberResponse.From(m, directory))
             .ToList();
 
         return new ProjectDetailResponse(
