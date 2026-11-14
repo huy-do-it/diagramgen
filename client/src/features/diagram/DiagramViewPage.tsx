@@ -1,6 +1,7 @@
 import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../../auth/AuthContext';
 import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
@@ -24,6 +25,7 @@ function sanitizeSvg(svg: string): string {
 export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, projectId, onBack, canEdit = true }) => {
   const notify = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [diagram, setDiagram] = useState<DiagramDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +40,9 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  // Zoom
+  // Zoom & View
   const [zoom, setZoom] = useState(1);
+  const [fitToScreen, setFitToScreen] = useState(true);
 
   const fetchDiagram = useCallback(async () => {
     try {
@@ -119,6 +122,18 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
     }
   };
 
+  const handleDownloadSvg = () => {
+    if (!diagram?.svgXml) return;
+    const blob = new Blob([diagram.svgXml], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${diagram.title.toLowerCase().replace(/[^a-z0-9_-]+/gi, '_') || 'diagram'}.svg`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    notify('Đã tải file SVG.');
+  };
+
   const handleViewVersion = async (versionNumber: number) => {
     try {
       const detail = await diagramApi.getVersionDetail(diagramId, versionNumber);
@@ -188,6 +203,14 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
         <div style={{ display: 'flex', gap: '8px' }}>
           {canEdit && (
             <button
+              className="button button-secondary"
+              onClick={() => navigate(`/diagrams/${diagramId}/edit`)}
+            >
+              ✏️ Chỉnh sửa sơ đồ
+            </button>
+          )}
+          {canEdit && diagram.status !== 'Rendered' && (
+            <button
               className="button button-primary"
               onClick={handleRender}
               disabled={diagram.status === 'Pending' || diagram.status === 'Rendering'}
@@ -217,17 +240,68 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px' }}>
         {/* SVG Viewport */}
         <div className="panel" style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ fontWeight: 600 }}>Bản vẽ trực quan (SVG)</span>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button className="button button-secondary button-small" aria-label="Thu nhỏ sơ đồ" onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}>-</button>
-              <button className="button button-secondary button-small" aria-label="Đặt lại tỷ lệ sơ đồ" onClick={() => setZoom(1)}>100%</button>
-              <button className="button button-secondary button-small" aria-label="Phóng to sơ đồ" onClick={() => setZoom((z) => Math.min(2.5, z + 0.2))}>+</button>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {diagram.svgXml && (
+                <button
+                  type="button"
+                  className="button button-secondary button-small"
+                  aria-label="Tải file ảnh SVG"
+                  onClick={handleDownloadSvg}
+                >
+                  📥 Tải SVG
+                </button>
+              )}
+              <button
+                type="button"
+                className={`button button-small ${fitToScreen ? 'button-primary' : 'button-secondary'}`}
+                aria-label="Chuyển chế độ vừa khung toàn cảnh"
+                onClick={() => {
+                  setFitToScreen(!fitToScreen);
+                  if (!fitToScreen) setZoom(1);
+                }}
+              >
+                {fitToScreen ? '⊡ Vừa khung' : '🔍 Kích thước gốc'}
+              </button>
+              <button
+                type="button"
+                className="button button-secondary button-small"
+                aria-label="Thu nhỏ sơ đồ"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoom((z) => Math.max(0.4, Number((z - 0.2).toFixed(1))));
+                }}
+              >
+                -
+              </button>
+              <button
+                type="button"
+                className="button button-secondary button-small"
+                aria-label="Đặt lại tỷ lệ 100%"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoom(1);
+                }}
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                className="button button-secondary button-small"
+                aria-label="Phóng to sơ đồ"
+                onClick={() => {
+                  setFitToScreen(false);
+                  setZoom((z) => Math.min(2.5, Number((z + 0.2).toFixed(1))));
+                }}
+              >
+                +
+              </button>
             </div>
           </div>
 
           <div
-            className="svg-canvas"
+            className={`svg-canvas ${fitToScreen ? 'fit-to-screen' : ''}`}
             style={{
               flex: 1,
               overflow: 'auto',
@@ -244,7 +318,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
               <div
                 role="img"
                 aria-label={diagram.title}
-                style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.15s ease' }}
+                style={fitToScreen ? { maxWidth: '100%', maxHeight: '100%', display: 'flex', justifyContent: 'center' } : { transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.15s ease' }}
                 dangerouslySetInnerHTML={{ __html: sanitizeSvg(diagram.svgXml) }}
               />
             ) : (
@@ -325,7 +399,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
                     <tr key={v.id}>
                       <td>v{v.version}</td>
                       <td>{new Date(v.createdAt).toLocaleString('vi-VN')}</td>
-                      <td>{v.createdBy.substring(0, 8)}…</td>
+                      <td>{v.createdBy.toLowerCase() === user?.id?.toLowerCase() ? `${user.username || user.fullName || 'Tôi'} (Bạn)` : `${v.createdBy.substring(0, 8)}…`}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="button button-secondary button-small" onClick={() => handleViewVersion(v.version)}>

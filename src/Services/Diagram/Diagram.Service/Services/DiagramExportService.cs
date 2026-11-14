@@ -50,6 +50,22 @@ public class DiagramExportService : IDiagramExportService
             }
             else
             {
+                var manifestEntry = archive.CreateEntry("README.txt", CompressionLevel.Fastest);
+                using (var writer = new StreamWriter(manifestEntry.Open(), Encoding.UTF8))
+                {
+                    writer.WriteLine("UMLForge Project Diagrams Export");
+                    writer.WriteLine($"Project ID: {projectId}");
+                    writer.WriteLine($"Exported At (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine($"Total Diagrams: {diagrams.Count}");
+                    writer.WriteLine();
+                    writer.WriteLine("Diagram List & Render Status:");
+                    foreach (var d in diagrams)
+                    {
+                        var hasSvg = !string.IsNullOrWhiteSpace(d.SvgXml);
+                        writer.WriteLine($"- {d.Title} ({d.Type}): Status={d.Status}, Version=v{d.CurrentVersion}, Image={(hasSvg ? "Included (.svg)" : "None (Chưa render - chỉ có .json)")}");
+                    }
+                }
+
                 var nameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var diagram in diagrams)

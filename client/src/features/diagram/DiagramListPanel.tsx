@@ -1,5 +1,6 @@
 import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { ApiError } from '../../shared/api';
 import { DiagramTypeLabels } from './types';
 import type { DiagramSummary, DiagramStatus } from './types';
@@ -19,6 +20,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
   canEdit = true,
 }) => {
   const notify = useToast();
+  const navigate = useNavigate();
   const [diagrams, setDiagrams] = useState<DiagramSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,13 +215,25 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
                   {canEdit && (
                     <>
                       <button
-                        className="button button-primary button-small"
-                        onClick={(e) => handleRender(e, d.id)}
-                        disabled={d.status === 'Pending' || d.status === 'Rendering'}
+                        className="button button-secondary button-small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/diagrams/${d.id}/edit`);
+                        }}
                         style={{ marginRight: '8px' }}
                       >
-                        Render
+                        Sửa
                       </button>
+                      {d.status !== 'Rendered' && (
+                        <button
+                          className="button button-primary button-small"
+                          onClick={(e) => handleRender(e, d.id)}
+                          disabled={d.status === 'Pending' || d.status === 'Rendering'}
+                          style={{ marginRight: '8px' }}
+                        >
+                          Render
+                        </button>
+                      )}
                       <button
                         className="button button-danger button-small"
                         onClick={(e) => handleDelete(e, d.id)}
