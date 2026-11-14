@@ -211,6 +211,7 @@ Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “ch
 - Thông báo InvitationSent mới mở `/invitations/mine`; Bell và UI-09 xử lý cả link project của thông báo cũ, không mở quyền project trước khi chấp nhận.
 - UI-04/UI-07 giữ tab Sơ đồ, bộ lọc và trang danh sách qua xem/chỉnh sửa/lưu/hủy; link trực tiếp mặc định quay về tab Sơ đồ đúng project.
 - Kiểm chứng trước ghép develop mới: 46 Notification tests, 18 client node tests, frontend build, 17 controlled-browser checks PASS; browser/API thật kiểm lời mời và 6 luồng quay lại danh sách PASS. Các fixture riêng đã xóa mềm; dữ liệu người dùng giữ nguyên.
+- Sau ghép PR #30/#31: giữ fix runtime R16 của Thiện, cập nhật hai regression terminal đã lỗi thời để kiểm 409/không Outbox/giữ kết quả. Notification46 + Diagram69 + Workspace33 tests, client18, build và17 controlled-browser checks PASS. Không sửa runtime Diagram trong phần regression này.
 - Theo xác nhận Minh, B-01–B-07 của Bảo đóng theo nghiệm thu leader. Các finding/acceptance tích hợp chung được theo dõi riêng, không suy dự án đã nghiệm thu 100%.
 
 ### 13/11/2026 — Thiện
