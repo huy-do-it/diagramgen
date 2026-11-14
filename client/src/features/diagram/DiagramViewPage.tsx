@@ -246,9 +246,10 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
       )}
 
       {/* Main Canvas Area */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px' }}>
+      {/* minmax(0, 1fr) + minWidth 0: sơ đồ rộng không được đẩy cột bình luận ra ngoài và làm trang tràn ngang */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '20px' }}>
         {/* SVG Viewport */}
-        <div className="panel" style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+        <div className="panel" style={{ minHeight: '500px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ fontWeight: 600 }}>Bản vẽ trực quan (SVG)</span>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -318,8 +319,11 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
               border: '1px solid var(--color-border)',
               borderRadius: '6px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              // Chỉ căn giữa bằng flex khi chưa có hình; có hình thì căn bằng margin auto để phần tràn vẫn cuộn tới được
+              // (ghi đè align/justify center của class .svg-canvas trong styles.css)
+              ...(diagram.svgXml
+                ? { alignItems: 'flex-start', justifyContent: 'flex-start' }
+                : { alignItems: 'center', justifyContent: 'center' }),
               padding: '20px',
             }}
           >
@@ -327,7 +331,8 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
               <div
                 role="img"
                 aria-label={diagram.title}
-                style={fitToScreen ? { maxWidth: '100%', maxHeight: '100%', display: 'flex', justifyContent: 'center' } : { transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.15s ease' }}
+                // Phóng to bằng CSS zoom (không dùng transform) để vùng cuộn lớn theo hình
+                style={fitToScreen ? { maxWidth: '100%', maxHeight: '100%', margin: 'auto', display: 'flex', justifyContent: 'center' } : { zoom, margin: 'auto' }}
                 dangerouslySetInnerHTML={{ __html: sanitizeSvg(diagram.svgXml) }}
               />
             ) : (

@@ -440,6 +440,7 @@ function ProjectDetailContent() {
       {activeTab === 'reviews' && (
         <ReviewPanel
           projectId={project.id}
+          projectName={project.name}
           isLeader={isLeader}
           isLecturer={isLecturer}
         />
