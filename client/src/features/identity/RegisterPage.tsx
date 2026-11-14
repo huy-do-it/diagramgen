@@ -66,7 +66,7 @@ export function RegisterPage() {
   }
 
   return (
-    <main className="login-page auth-page">
+    <div className="login-page">
       <div className="login-story">
         <div className="brand">
           <div className="brand-mark">📐</div>
@@ -102,14 +102,12 @@ export function RegisterPage() {
           <h2>Đăng ký thành viên</h2>
           <p className="muted">Điền thông tin bên dưới để bắt đầu sử dụng hệ thống.</p>
 
-          {errorMessage && <div id="register-error" role="alert" className="form-error" style={{ marginBottom: 16 }}>{errorMessage}</div>}
+          {errorMessage && <div className="form-error" style={{ marginBottom: 16 }}>{errorMessage}</div>}
 
-          <form onSubmit={handleSubmit} aria-busy={submitting}>
+          <form onSubmit={handleSubmit}>
             <label htmlFor="reg-username">Tên đăng nhập</label>
             <input
               id="reg-username"
-              aria-invalid={!!errorMessage}
-              aria-describedby={errorMessage ? 'register-error' : undefined}
               type="text"
               autoComplete="username"
               placeholder="Ví dụ: student1, huydd..."
@@ -122,8 +120,6 @@ export function RegisterPage() {
             <label htmlFor="reg-fullname">Họ và tên</label>
             <input
               id="reg-fullname"
-              aria-invalid={!!errorMessage}
-              aria-describedby={errorMessage ? 'register-error' : undefined}
               type="text"
               autoComplete="name"
               placeholder="Ví dụ: Đỗ Đức Huy"
@@ -150,8 +146,6 @@ export function RegisterPage() {
             <div className="password-field">
               <input
                 id="reg-password"
-                aria-invalid={!!errorMessage}
-                aria-describedby={errorMessage ? 'register-error' : undefined}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Nhập mật khẩu..."
@@ -163,9 +157,7 @@ export function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                aria-pressed={showPassword}
-                aria-controls="reg-password reg-confirm"
+                tabIndex={-1}
               >
                 {showPassword ? 'Ẩn' : 'Hiện'}
               </button>
@@ -174,15 +166,12 @@ export function RegisterPage() {
             <label htmlFor="reg-confirm">Xác nhận mật khẩu</label>
             <input
               id="reg-confirm"
-              aria-invalid={!!errorMessage}
-              aria-describedby={errorMessage ? 'register-error' : undefined}
               type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="Nhập lại mật khẩu..."
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               disabled={submitting}
-              aria-busy={submitting}
               required
             />
 
@@ -204,6 +193,6 @@ export function RegisterPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

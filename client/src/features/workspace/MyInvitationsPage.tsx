@@ -1,14 +1,9 @@
-import { useToast } from '../../shared/Toast';
-import { LoadingState, LoadError, requestErrorMessage } from '../../shared/PageState';
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router';
 import { ApiError } from '../../shared/api';
 import { workspaceApi } from './workspaceApi';
 import type { InvitationItem } from './types';
 
 export function MyInvitationsPage() {
-  const notify = useToast();
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [invitations, setInvitations] = useState<InvitationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -16,13 +11,15 @@ export function MyInvitationsPage() {
 
   const fetchInvitations = useCallback(async () => {
     setLoading(true);
-    setMessage(null);
-    setLoadError(null);
     try {
       const data = await workspaceApi.getMyInvitations();
       setInvitations(data);
     } catch (err: unknown) {
-      setLoadError(requestErrorMessage(err, 'Không tải được danh sách lời mời.'));
+      if (err instanceof ApiError) {
+        setMessage({ text: err.message, type: 'error' });
+      } else {
+        setMessage({ text: 'Không tải được danh sách lời mời.', type: 'error' });
+      }
     } finally {
       setLoading(false);
     }
@@ -37,7 +34,10 @@ export function MyInvitationsPage() {
     setMessage(null);
     try {
       await workspaceApi.acceptInvitation(invitation.id);
-      notify(`Đã chấp nhận lời mời tham gia dự án "${invitation.projectName}" thành công!`);
+      setMessage({
+        text: `Đã chấp nhận lời mời tham gia dự án "${invitation.projectName}" thành công!`,
+        type: 'success',
+      });
       await fetchInvitations();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -59,7 +59,10 @@ export function MyInvitationsPage() {
     setMessage(null);
     try {
       await workspaceApi.declineInvitation(invitation.id);
-      notify(`Đã từ chối lời mời vào dự án "${invitation.projectName}".`);
+      setMessage({
+        text: `Đã từ chối lời mời vào dự án "${invitation.projectName}".`,
+        type: 'success',
+      });
       await fetchInvitations();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -86,7 +89,7 @@ export function MyInvitationsPage() {
   };
 
   return (
-    <div className="feature-page">
+    <div>
       <div className="panel-header">
         <div>
           <h1>Lời mời tham gia dự án</h1>
@@ -97,9 +100,8 @@ export function MyInvitationsPage() {
       </div>
 
       {message && (
-        <div role="alert" className="notice danger" style={{ marginBottom: 20 }}>
+        <div className={message.type === 'success' ? 'notice' : 'form-error'} style={{ marginBottom: 20 }}>
           {message.text}
-          <div><button type="button" className="button button-secondary" onClick={fetchInvitations}>Thử lại</button></div>
         </div>
       )}
 
@@ -109,26 +111,23 @@ export function MyInvitationsPage() {
         </div>
 
         {loading ? (
-          <LoadingState label="Đang tải danh sách lời mời…" />
-        ) : loadError ? (
-          <LoadError message={loadError} onRetry={fetchInvitations} />
+          <p className="muted" style={{ padding: 20, textAlign: 'center' }}>Đang tải danh sách lời mời...</p>
         ) : invitations.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">✉️</div>
             <h2>Chưa có lời mời nào</h2>
-            <Link to="/projects" className="button button-secondary">Về danh sách dự án</Link>
             <p className="muted">Khi trưởng nhóm (Leader) gửi lời mời tham gia dự án, bạn sẽ thấy xuất hiện tại đây.</p>
           </div>
         ) : (
-          <div className="table-wrap" role="region" aria-label="Danh sách lời mời" tabIndex={0}>
+          <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th scope="col">Tên dự án</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Thời gian gửi</th>
-                  <th scope="col">Hạn phản hồi</th>
-                  <th scope="col" style={{ textAlign: 'right' }}>Thao tác</th>
+                  <th>Tên dự án</th>
+                  <th>Trạng thái</th>
+                  <th>Thời gian gửi</th>
+                  <th>Hạn phản hồi</th>
+                  <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -163,7 +162,7 @@ export function MyInvitationsPage() {
                             </button>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>Đã hoàn tất</span>
+                          <span style={{ fontSize: 13, color: '#919aab' }}>Đã hoàn tất</span>
                         )}
                       </td>
                     </tr>

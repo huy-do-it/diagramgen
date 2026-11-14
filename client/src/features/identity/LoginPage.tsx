@@ -1,13 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate, Link, useLocation } from 'react-router';
+import { Navigate, useNavigate, Link } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../shared/api';
 
 export function LoginPage() {
   const { user, notice, signIn } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const registrationNotice = typeof location.state?.notice === 'string' ? location.state.notice : null;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -43,7 +41,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="login-page auth-page">
+    <div className="login-page">
       <div className="login-story">
         <div className="brand">
           <div className="brand-mark">📐</div>
@@ -85,16 +83,13 @@ export function LoginPage() {
           <h2>Đăng nhập hệ thống</h2>
           <p className="muted">Nhập thông tin tài khoản của bạn để tiếp tục vào không gian làm việc.</p>
 
-          {registrationNotice && <div className="notice success" role="status">{registrationNotice}</div>}
-          {notice && <div className="notice" role="status" style={{ marginBottom: 16 }}>{notice}</div>}
-          {errorMessage && <div id="login-error" role="alert" className="form-error" style={{ marginBottom: 16 }}>{errorMessage}</div>}
+          {notice && <div className="notice" style={{ marginBottom: 16 }}>{notice}</div>}
+          {errorMessage && <div className="form-error" style={{ marginBottom: 16 }}>{errorMessage}</div>}
 
-          <form onSubmit={handleSubmit} aria-busy={submitting}>
+          <form onSubmit={handleSubmit}>
             <label htmlFor="username">Tên đăng nhập</label>
             <input
               id="username"
-              aria-invalid={!!errorMessage}
-              aria-describedby={errorMessage ? 'login-error' : undefined}
               type="text"
               autoComplete="username"
               placeholder="Nhập tên đăng nhập..."
@@ -108,8 +103,6 @@ export function LoginPage() {
             <div className="password-field">
               <input
                 id="password"
-                aria-invalid={!!errorMessage}
-                aria-describedby={errorMessage ? 'login-error' : undefined}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="Nhập mật khẩu..."
@@ -121,9 +114,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                aria-pressed={showPassword}
-                aria-controls="password"
+                tabIndex={-1}
               >
                 {showPassword ? 'Ẩn' : 'Hiện'}
               </button>
@@ -133,7 +124,6 @@ export function LoginPage() {
               type="submit"
               className="button button-primary login-submit"
               disabled={submitting}
-              aria-busy={submitting}
             >
               <span>{submitting ? 'Đang xác thực...' : 'Đăng nhập'}</span>
               <span>&rarr;</span>
@@ -148,7 +138,7 @@ export function LoginPage() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
