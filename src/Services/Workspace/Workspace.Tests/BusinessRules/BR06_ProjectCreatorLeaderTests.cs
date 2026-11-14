@@ -36,6 +36,7 @@ public class BR06_ProjectCreatorLeaderTests
 
         _projectService = new ProjectService(
             _projectRepo,
+            new UserDirectoryRepository(_context),
             _outboxMock.Object,
             _currentUserMock.Object,
             new CreateProjectRequestValidator(),

@@ -14,6 +14,7 @@ namespace Workspace.Service.Services;
 public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepo;
+    private readonly IUserDirectoryRepository _userDirectoryRepo;
     private readonly IOutbox _outbox;
     private readonly ICurrentUser _currentUser;
     private readonly IValidator<CreateProjectRequest> _createValidator;
@@ -21,12 +22,14 @@ public class ProjectService : IProjectService
 
     public ProjectService(
         IProjectRepository projectRepo,
+        IUserDirectoryRepository userDirectoryRepo,
         IOutbox outbox,
         ICurrentUser currentUser,
         IValidator<CreateProjectRequest> createValidator,
         IValidator<UpdateProjectRequest> updateValidator)
     {
         _projectRepo = projectRepo;
+        _userDirectoryRepo = userDirectoryRepo;
         _outbox = outbox;
         _currentUser = currentUser;
         _createValidator = createValidator;
@@ -67,7 +70,7 @@ public class ProjectService : IProjectService
 
         await _projectRepo.SaveChangesAsync(ct);
 
-        return ToDetailResponse(project);
+        return await ToDetailResponseAsync(project, ct);
     }
 
     public async Task<PagedResult<ProjectSummaryResponse>> GetProjectsAsync(PageQuery query, string? role, CancellationToken ct = default)
@@ -104,7 +107,7 @@ public class ProjectService : IProjectService
         if (!isMember)
             throw new ForbiddenException("FORBIDDEN", "Bạn không có quyền truy cập dự án này.");
 
-        return ToDetailResponse(project);
+        return await ToDetailResponseAsync(project, ct);
     }
 
     public async Task<ProjectDetailResponse> UpdateProjectAsync(Guid id, UpdateProjectRequest request, string? ifMatch, CancellationToken ct = default)
@@ -147,7 +150,7 @@ public class ProjectService : IProjectService
         _projectRepo.Update(project);
         await _projectRepo.SaveChangesAsync(ct);
 
-        return ToDetailResponse(project);
+        return await ToDetailResponseAsync(project, ct);
     }
 
     public async Task DeleteProjectAsync(Guid id, CancellationToken ct = default)
@@ -185,7 +188,8 @@ public class ProjectService : IProjectService
             throw new ForbiddenException("FORBIDDEN", "Bạn không có quyền truy cập dự án này.");
 
         var members = await _projectRepo.GetMembersAsync(projectId, ct);
-        return members.Select(m => new ProjectMemberResponse(m.UserId, m.Role, m.JoinedAt)).ToList();
+        var directory = await _userDirectoryRepo.GetByIdsAsync(members.Select(m => m.UserId), ct);
+        return members.Select(m => ProjectMemberResponse.From(m, directory)).ToList();
     }
 
     public async Task RemoveMemberAsync(Guid projectId, Guid memberUserId, CancellationToken ct = default)
@@ -225,10 +229,11 @@ public class ProjectService : IProjectService
         await _projectRepo.SaveChangesAsync(ct);
     }
 
-    private static ProjectDetailResponse ToDetailResponse(Project p)
+    private async Task<ProjectDetailResponse> ToDetailResponseAsync(Project p, CancellationToken ct)
     {
+        var directory = await _userDirectoryRepo.GetByIdsAsync(p.Members.Select(m => m.UserId), ct);
         var memberDtos = p.Members
-            .Select(m => new ProjectMemberResponse(m.UserId, m.Role, m.JoinedAt))
+            .Select(m => ProjectMemberResponse.From(m, directory))
             .ToList();
 
         return new ProjectDetailResponse(
