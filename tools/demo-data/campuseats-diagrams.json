@@ -1,0 +1,419 @@
+[
+  {
+    "type": "BusinessContext",
+    "title": "CampusEats - Business Context",
+    "model": {
+      "title": "CampusEats - Business Context",
+      "system": "CampusEats Platform",
+      "internalComponents": [
+        "Student Web App",
+        "Canteen Portal",
+        "Backend API",
+        "Order Worker",
+        "SQL Server"
+      ],
+      "externalSystems": [
+        "Student",
+        "Canteen Staff",
+        "VNPay",
+        "FPT Student SSO",
+        "Admin",
+        "Firebase Push Notification"
+      ],
+      "relations": [
+        {
+          "from": "Student",
+          "to": "CampusEats Platform",
+          "protocol": "Cart and order details"
+        },
+        {
+          "from": "CampusEats Platform",
+          "to": "Student",
+          "protocol": "Order status and receipt"
+        },
+        {
+          "from": "Canteen Staff",
+          "to": "CampusEats Platform",
+          "protocol": "Menu, stock and order confirmation"
+        },
+        {
+          "from": "CampusEats Platform",
+          "to": "Canteen Staff",
+          "protocol": "New paid orders"
+        },
+        {
+          "from": "CampusEats Platform",
+          "to": "VNPay",
+          "protocol": "Payment request"
+        },
+        {
+          "from": "VNPay",
+          "to": "CampusEats Platform",
+          "protocol": "Payment result (IPN)"
+        },
+        {
+          "from": "CampusEats Platform",
+          "to": "FPT Student SSO",
+          "protocol": "Login credentials"
+        },
+        {
+          "from": "FPT Student SSO",
+          "to": "CampusEats Platform",
+          "protocol": "Student identity"
+        },
+        {
+          "from": "Admin",
+          "to": "CampusEats Platform",
+          "protocol": "Canteen and account settings"
+        },
+        {
+          "from": "CampusEats Platform",
+          "to": "Admin",
+          "protocol": "Sales report"
+        },
+        {
+          "from": "Order Worker",
+          "to": "Firebase Push Notification",
+          "protocol": "Order-ready notification"
+        }
+      ]
+    }
+  },
+  {
+    "type": "UseCase",
+    "title": "CampusEats - Use Cases",
+    "model": {
+      "title": "CampusEats - Use Cases",
+      "systemBoundary": "CampusEats",
+      "actors": [
+        "Student",
+        "Canteen Staff",
+        "Canteen Manager",
+        "VNPay"
+      ],
+      "useCases": [
+        "Log in",
+        "Browse menu",
+        "Place order",
+        "Apply voucher",
+        "Pay online",
+        "Pay with VNPay",
+        "Track order status",
+        "Confirm order",
+        "Update menu and stock",
+        "View sales report"
+      ],
+      "relations": [
+        {
+          "from": "Student",
+          "to": "Browse menu"
+        },
+        {
+          "from": "Student",
+          "to": "Place order"
+        },
+        {
+          "from": "Student",
+          "to": "Track order status"
+        },
+        {
+          "from": "Place order",
+          "to": "Log in",
+          "type": "include"
+        },
+        {
+          "from": "Place order",
+          "to": "Pay online",
+          "type": "include"
+        },
+        {
+          "from": "Apply voucher",
+          "to": "Place order",
+          "type": "extend"
+        },
+        {
+          "from": "Pay with VNPay",
+          "to": "Pay online",
+          "type": "generalization"
+        },
+        {
+          "from": "Pay with VNPay",
+          "to": "VNPay"
+        },
+        {
+          "from": "Canteen Staff",
+          "to": "Confirm order"
+        },
+        {
+          "from": "Canteen Staff",
+          "to": "Update menu and stock"
+        },
+        {
+          "from": "Canteen Manager",
+          "to": "Canteen Staff",
+          "type": "generalization"
+        },
+        {
+          "from": "Canteen Manager",
+          "to": "View sales report"
+        }
+      ]
+    }
+  },
+  {
+    "type": "Sequence",
+    "title": "CampusEats - Place and Pay Order",
+    "model": {
+      "title": "CampusEats - Place and Pay Order",
+      "participants": [
+        "Student",
+        "Web App",
+        "Backend API",
+        "SQL Server",
+        "VNPay",
+        "Order Worker"
+      ],
+      "messages": [
+        {
+          "from": "Student",
+          "to": "Web App",
+          "label": "Tap Checkout",
+          "isResponse": false
+        },
+        {
+          "from": "Web App",
+          "to": "Backend API",
+          "label": "POST /api/orders",
+          "isResponse": false
+        },
+        {
+          "fragment": "loop",
+          "branches": [
+            {
+              "condition": "for each dish in cart",
+              "messages": [
+                {
+                  "from": "Backend API",
+                  "to": "SQL Server",
+                  "label": "Check stock of dish",
+                  "isResponse": false
+                },
+                {
+                  "from": "SQL Server",
+                  "to": "Backend API",
+                  "label": "Stock quantity",
+                  "isResponse": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "fragment": "alt",
+          "branches": [
+            {
+              "condition": "all dishes in stock",
+              "messages": [
+                {
+                  "from": "Backend API",
+                  "to": "SQL Server",
+                  "label": "Save order (Pending)",
+                  "isResponse": false
+                },
+                {
+                  "fragment": "opt",
+                  "branches": [
+                    {
+                      "condition": "student entered a voucher",
+                      "messages": [
+                        {
+                          "from": "Backend API",
+                          "to": "SQL Server",
+                          "label": "Validate voucher and apply discount",
+                          "isResponse": false
+                        },
+                        {
+                          "from": "SQL Server",
+                          "to": "Backend API",
+                          "label": "Discounted total",
+                          "isResponse": true
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "from": "Backend API",
+                  "to": "VNPay",
+                  "label": "Create payment URL",
+                  "isResponse": false
+                },
+                {
+                  "from": "VNPay",
+                  "to": "Backend API",
+                  "label": "Payment URL",
+                  "isResponse": true
+                },
+                {
+                  "from": "Backend API",
+                  "to": "Web App",
+                  "label": "201 Created: orderId + paymentUrl",
+                  "isResponse": true
+                },
+                {
+                  "from": "Student",
+                  "to": "VNPay",
+                  "label": "Confirm payment",
+                  "isResponse": false
+                },
+                {
+                  "fragment": "alt",
+                  "branches": [
+                    {
+                      "condition": "payment success",
+                      "messages": [
+                        {
+                          "from": "VNPay",
+                          "to": "Backend API",
+                          "label": "IPN callback: success",
+                          "isResponse": false
+                        },
+                        {
+                          "from": "Backend API",
+                          "to": "Order Worker",
+                          "label": "Publish order.paid event",
+                          "isResponse": false
+                        },
+                        {
+                          "from": "Order Worker",
+                          "to": "Web App",
+                          "label": "Push: order sent to canteen",
+                          "isResponse": true
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "payment failed or timeout",
+                      "messages": [
+                        {
+                          "from": "VNPay",
+                          "to": "Backend API",
+                          "label": "IPN callback: failed",
+                          "isResponse": false
+                        },
+                        {
+                          "from": "Backend API",
+                          "to": "Web App",
+                          "label": "Payment failed",
+                          "isResponse": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "condition": "some dishes sold out",
+              "messages": [
+                {
+                  "from": "Backend API",
+                  "to": "Web App",
+                  "label": "409 Conflict: sold-out dishes",
+                  "isResponse": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "type": "Activity",
+    "title": "CampusEats - Order a Meal",
+    "model": {
+      "title": "CampusEats - Order a Meal",
+      "startNode": "Open CampusEats",
+      "steps": [
+        "Choose canteen",
+        "Add dishes to cart",
+        "Place order",
+        "Pay with VNPay",
+        "Wait for order ready",
+        "Pick up meal at counter"
+      ],
+      "decisions": [
+        {
+          "condition": "Logged in?",
+          "yesBranch": "Choose canteen",
+          "noBranch": "Log in with student account"
+        },
+        {
+          "condition": "All dishes in stock?",
+          "yesBranch": "Place order",
+          "noBranch": "Remove sold-out dishes"
+        },
+        {
+          "condition": "Payment successful?",
+          "yesBranch": "Wait for order ready",
+          "noBranch": "Cancel order after 10 minutes"
+        }
+      ]
+    }
+  },
+  {
+    "type": "State",
+    "title": "CampusEats - Order Lifecycle",
+    "model": {
+      "title": "CampusEats - Order Lifecycle",
+      "initialState": "Pending",
+      "states": [
+        "Pending",
+        "Paid",
+        "Confirmed",
+        "Preparing",
+        "Ready",
+        "Completed",
+        "Cancelled"
+      ],
+      "transitions": [
+        {
+          "from": "Pending",
+          "event": "VNPay callback: success",
+          "to": "Paid"
+        },
+        {
+          "from": "Pending",
+          "event": "not paid within 10 minutes",
+          "to": "Cancelled"
+        },
+        {
+          "from": "Paid",
+          "event": "staff confirms order",
+          "to": "Confirmed"
+        },
+        {
+          "from": "Paid",
+          "event": "staff rejects (sold out) + refund",
+          "to": "Cancelled"
+        },
+        {
+          "from": "Confirmed",
+          "event": "kitchen starts cooking",
+          "to": "Preparing"
+        },
+        {
+          "from": "Preparing",
+          "event": "staff marks ready",
+          "to": "Ready"
+        },
+        {
+          "from": "Ready",
+          "event": "student picks up",
+          "to": "Completed"
+        }
+      ]
+    }
+  }
+]

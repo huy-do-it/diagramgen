@@ -42,11 +42,15 @@ docker compose -f deploy/docker-compose.yml up --build -d --wait
 Mở http://localhost:3000. Dừng: `docker compose -f deploy/docker-compose.yml down` (thêm `-v` để xóa dữ liệu).
 Project Compose tên **`umlforge-v2`** để không trùng container/volume với v1 trên cùng máy.
 
-Dựng lại từ đầu (xóa volume, build, chờ healthy, bắn sự kiện mẫu):
+Dựng lại từ đầu (xóa volume, build, chờ healthy, tạo dữ liệu demo CampusEats qua Gateway):
 
 ```powershell
-./tools/reset-demo.ps1 -Seed
+./tools/reset-demo.ps1 -DemoData
 ```
+
+Stack đang chạy mà chỉ cần thêm dữ liệu demo (chạy lại không tạo trùng): `./tools/seed-demo-data.ps1`.
+Đăng nhập `student1` (Leader), `student2`/`student3` (thành viên), `lecturer1` (giảng viên); mật khẩu là
+`Seed:DefaultPassword` trong `src/Services/Identity/Identity.API/appsettings.Development.json`.
 
 ## Chạy 1 service trên máy (dev)
 
@@ -70,7 +74,8 @@ khi đã có Gateway đặt `VITE_USE_GATEWAY=true` trong `client/.env.local`.
 |---|---|
 | `make-dev-token.ps1 -Role Lecturer -Name lecturer1 [-UserId <guid>]` | Tạo JWT dev đúng claim (TASKS §1.2) → dán vào nút **Authorize** của Swagger |
 | `seed-events.ps1 <identity\|workspace\|diagram\|render\|all> [-NewIds]` | Bắn sự kiện mẫu CampusEats (`tools/events/*/*.json`) lên Redis Streams. Chạy lại cùng id → consumer bỏ qua (Inbox); `-NewIds` để xử lý lại |
-| `reset-demo.ps1 [-Force] [-Seed]` | Xóa container + volume của `umlforge-v2`, build, chờ healthy, (tùy chọn) bắn sự kiện mẫu |
+| `reset-demo.ps1 [-Force] [-DemoData] [-Seed]` | Xóa container + volume của `umlforge-v2`, build, chờ healthy; `-DemoData` tạo dữ liệu demo qua Gateway, `-Seed` bắn sự kiện mẫu |
+| `seed-demo-data.ps1 [-GatewayUrl <url>] [-ProjectName <tên>]` | Tạo project CampusEats, mời và chấp nhận thành viên, gán giảng viên, tạo + render 5 sơ đồ (`tools/demo-data/campuseats-diagrams.json`) bằng API thật qua Gateway. Chạy lại không tạo trùng |
 
 Id cố định trong sự kiện mẫu (tạo token đúng người bằng `-UserId`): admin `a0000000-0000-0000-0000-000000000001`,
 lecturer1 `b0000000-…-000000000001`, student1…6 `c0000000-…-00000000000[1-6]`, project CampusEats
