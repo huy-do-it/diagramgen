@@ -201,8 +201,8 @@ app.MapGet("/health", async (IdentityDbContext dbContext, IConnectionMultiplexer
         : Results.Json(response, statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 
-// Auto migration & seed for Development
-if (app.Environment.IsDevelopment())
+// Initialize relational schema before the host listens, in every environment.
+// Demo accounts are seeded only in Development.
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
@@ -211,11 +211,13 @@ if (app.Environment.IsDevelopment())
         try
         {
             await dbContext.Database.MigrateAsync();
-            await IdentityDbSeeder.SeedAsync(dbContext, app.Configuration);
+            if (app.Environment.IsDevelopment())
+                await IdentityDbSeeder.SeedAsync(dbContext, app.Configuration);
         }
         catch (Exception ex)
         {
-            app.Logger.LogWarning(ex, "Could not apply database migrations on startup.");
+            app.Logger.LogCritical(ex, "Identity schema initialization failed; startup aborted.");
+            throw;
         }
     }
 }

@@ -277,7 +277,8 @@ Job định kỳ ghi log dạng `[CleanupJob] removed 3 failed jobs, 1 orphan ar
 | 4 | gateway | 5 service healthy |
 | 5 | client | gateway healthy |
 
-- Mỗi service tự chạy `Database.MigrateAsync()` cho DB của mình khi khởi động; Identity seed tài khoản Admin + Lecturer mẫu.
+- Mỗi service tự chạy `Database.MigrateAsync()` cho DB của mình khi khởi động. Identity và Workspace áp dụng migration cho relational DB ở mọi môi trường, trước khi host nhận request; lỗi khởi tạo schema phải log critical và dừng startup, không tiếp tục như service khỏe.
+- Identity chỉ seed tài khoản mẫu Admin/Lecturer/Student trong **Development**. Production chạy migration nhưng không tự tạo tài khoản demo; phần kiểm Production dưới đây là schema/startup, không thay thế quy trình cấp tài khoản quản trị Production được phê duyệt. WF nghiệm thu có tài khoản mẫu dùng Development.
 - Biến môi trường dùng chung trong `.env`: `MSSQL_SA_PASSWORD`, `JWT_KEY`, `JWT_ISSUER`, `REDIS_URL`.
 - Chạy: `docker compose -f deploy/docker-compose.yml up --build -d` → mở `http://localhost:3000`.
 - Mỗi service có file `deploy/compose/<service>.yml` riêng; file gốc dùng `include` (cần Docker Compose ≥ 2.20) → mỗi người sửa file của mình, không xung đột.
