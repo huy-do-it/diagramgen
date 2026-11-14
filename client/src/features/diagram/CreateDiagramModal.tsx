@@ -12,6 +12,8 @@ const examplesByType: Record<DiagramType, { title: string; json: string }> = {
   [DiagramType.UseCase]: {
     title: 'CampusEats Order Management',
     json: JSON.stringify({
+      type: 'UseCase',
+      title: 'CampusEats Order Management',
       systemBoundary: 'CampusEats',
       actors: ['Student', 'Restaurant'],
       useCases: ['Order Food', 'Track Order', 'Update Menu'],
@@ -122,7 +124,19 @@ export function CreateDiagramModal({ projectId, onClose, onCreated }: {
       setError('Nhập tiêu đề sơ đồ.');
       return;
     }
-    try { JSON.parse(modelJson); } catch {
+    let payloadModel = modelJson;
+    try {
+      const parsed = JSON.parse(modelJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        if (!parsed.title || !String(parsed.title).trim()) {
+          parsed.title = title.trim();
+        }
+        if (!parsed.type) {
+          parsed.type = DiagramType[type] || 'UseCase';
+        }
+        payloadModel = JSON.stringify(parsed, null, 2);
+      }
+    } catch {
       setErrorField('model');
       setError('Model JSON chưa đúng cú pháp. Kiểm tra dấu ngoặc, dấu phẩy và dấu nháy.');
       return;
@@ -130,7 +144,7 @@ export function CreateDiagramModal({ projectId, onClose, onCreated }: {
     pending.current = true;
     setBusy(true);
     try {
-      const created = await diagramApi.createDiagram({ projectId, type, title: title.trim(), modelJson });
+      const created = await diagramApi.createDiagram({ projectId, type, title: title.trim(), modelJson: payloadModel });
       if (!mounted.current) return;
       notify('Đã tạo sơ đồ.');
       onClose();

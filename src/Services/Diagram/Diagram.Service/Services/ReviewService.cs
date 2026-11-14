@@ -44,21 +44,17 @@ public class ReviewService : IReviewService
         CancellationToken cancellationToken = default)
     {
         var projectId = request.ProjectId;
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
 
         // BR-29: Chỉ Leader mới được gửi review
-        if (!isAdmin)
+        var access = await _memberAccessRepository.GetAccessAsync(projectId, _currentUser.UserId, cancellationToken);
+        if (access == null)
         {
-            var access = await _memberAccessRepository.GetAccessAsync(projectId, _currentUser.UserId, cancellationToken);
-            if (access == null)
-            {
-                throw new BusinessRuleException("BR-11", "You do not have access to this project.", 403);
-            }
+            throw new BusinessRuleException("BR-11", "You do not have access to this project.", 403);
+        }
 
-            if (!string.Equals(access.Role, ProjectRole.Leader, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new BusinessRuleException("BR-29", "Only project leader can submit project for review.", 403);
-            }
+        if (!string.Equals(access.Role, ProjectRole.Leader, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessRuleException("BR-29", "Only project leader can submit project for review.", 403);
         }
 
         // Lấy tất cả diagram chưa bị xóa của project
@@ -200,21 +196,16 @@ public class ReviewService : IReviewService
             throw new BusinessRuleException("NOT_FOUND", $"Review with ID '{id}' was not found.", 404);
         }
 
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
-
         // BR-30: Chỉ Lecturer của project mới được duyệt
-        if (!isAdmin)
+        var access = await _memberAccessRepository.GetAccessAsync(review.ProjectId, _currentUser.UserId, cancellationToken);
+        if (access == null)
         {
-            var access = await _memberAccessRepository.GetAccessAsync(review.ProjectId, _currentUser.UserId, cancellationToken);
-            if (access == null)
-            {
-                throw new BusinessRuleException("BR-11", "You do not have access to this project.", 403);
-            }
+            throw new BusinessRuleException("BR-11", "You do not have access to this project.", 403);
+        }
 
-            if (!string.Equals(access.Role, ProjectRole.Lecturer, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new BusinessRuleException("BR-30", "Only the assigned lecturer can decide on reviews.", 403);
-            }
+        if (!string.Equals(access.Role, ProjectRole.Lecturer, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessRuleException("BR-30", "Only the assigned lecturer can decide on reviews.", 403);
         }
 
         if (review.Status != ReviewStatus.Submitted)
@@ -247,9 +238,6 @@ public class ReviewService : IReviewService
 
     private async Task EnsureProjectAccessAsync(Guid projectId, CancellationToken cancellationToken)
     {
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
-        if (isAdmin) return;
-
         var hasAccess = await _memberAccessRepository.HasAccessAsync(projectId, _currentUser.UserId, cancellationToken);
         if (!hasAccess)
         {
