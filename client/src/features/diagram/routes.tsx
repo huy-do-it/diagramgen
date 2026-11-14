@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { Route, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { DiagramViewPage } from './DiagramViewPage';
+import { DiagramEditPage } from './DiagramEditPage';
 import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { CreateDiagramModal } from './CreateDiagramModal';
@@ -21,6 +22,11 @@ export const diagramRoutes: ReactElement[] = [
     key="diagram-view"
     path="diagrams/:diagramId"
     element={<DiagramStudioLayout><DiagramViewWrapper /></DiagramStudioLayout>}
+  />,
+  <Route
+    key="diagram-edit"
+    path="diagrams/:diagramId/edit"
+    element={<DiagramStudioLayout><DiagramEditWrapper /></DiagramStudioLayout>}
   />,
   <Route
     key="diagram-review"
@@ -103,6 +109,19 @@ function DiagramViewWrapper() {
   );
 }
 
+function DiagramEditWrapper() {
+  const { diagramId = '' } = useParams<{ diagramId: string }>();
+  const navigate = useNavigate();
+
+  return (
+    <DiagramEditPage
+      key={diagramId}
+      diagramId={diagramId}
+      onBack={() => navigate(`/diagrams/${diagramId}`)}
+    />
+  );
+}
+
 function ReviewPanelWrapper() {
   const [searchParams] = useSearchParams();
   const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
@@ -169,4 +188,5 @@ export * from './types';
 export * from './diagramApi';
 export * from './DiagramListPanel';
 export * from './DiagramViewPage';
+export * from './DiagramEditPage';
 export * from './ReviewPanel';
