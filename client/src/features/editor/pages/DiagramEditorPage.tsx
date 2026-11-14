@@ -249,6 +249,11 @@ export function DiagramEditorPage() {
     } else if (failure instanceof ApiError && failure.status === 409 && failure.code === 'BR-16') {
       setConflict(true);
       setError('Sơ đồ vừa được người khác lưu. Tải lại để xem bản mới nhất trước khi sửa tiếp.');
+    } else if (failure instanceof ApiError && failure.status === 409 && failure.code === 'BR-14') {
+      const msg = failure.message?.includes('Cannot trigger render')
+        ? 'Sơ đồ đang chờ hoặc đang render, chưa gửi thêm được.'
+        : (failure.message || 'Phiên bản này đã được render hoặc đã thất bại. Để render lại, hãy chỉnh sửa để tạo phiên bản mới hoặc sử dụng chức năng Retry của Admin.');
+      setError(msg);
     } else {
       setError(errorMessage(failure));
     }
@@ -316,7 +321,10 @@ export function DiagramEditorPage() {
       setNotice(`Đã gửi yêu cầu render phiên bản ${accepted.version}. Sơ đồ đang render, bạn có thể tiếp tục làm việc.`);
     } catch (failure) {
       if (failure instanceof ApiError && failure.status === 409 && failure.code === 'BR-14') {
-        setError('Sơ đồ đang chờ hoặc đang render, chưa gửi thêm được.');
+        const msg = failure.message?.includes('Cannot trigger render')
+          ? 'Sơ đồ đang chờ hoặc đang render, chưa gửi thêm được.'
+          : (failure.message || 'Phiên bản này đã được render hoặc đã thất bại. Để render lại, hãy chỉnh sửa để tạo phiên bản mới hoặc sử dụng chức năng Retry của Admin.');
+        setError(msg);
         void render.refresh();
       } else {
         handleApiFailure(failure);

@@ -17,6 +17,8 @@ const examplesByType: Record<DiagramType, { title: string; json: string }> = {
   [DiagramType.UseCase]: {
     title: 'CampusEats Order Management',
     json: JSON.stringify({
+      type: 'UseCase',
+      title: 'CampusEats Order Management',
       systemBoundary: 'CampusEats',
       actors: ['Student', 'Restaurant'],
       useCases: ['Order Food', 'Track Order', 'Update Menu'],
@@ -150,6 +152,7 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
     if (pending.current || isLocked) return;
     setSaveError(null);
     setSaveErrorField(null);
+    let payloadModel = modelJson;
 
     if (!title.trim()) {
       setSaveErrorField('title');
@@ -157,7 +160,16 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
       return;
     }
     try {
-      JSON.parse(modelJson);
+      const parsed = JSON.parse(modelJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        if (!parsed.title || !String(parsed.title).trim()) {
+          parsed.title = title.trim();
+        }
+        if (!parsed.type && diagram) {
+          parsed.type = diagram.type;
+        }
+        payloadModel = JSON.stringify(parsed, null, 2);
+      }
     } catch {
       setSaveErrorField('model');
       setSaveError('Model JSON chưa đúng cú pháp. Kiểm tra dấu ngoặc, dấu phẩy và dấu nháy.');
@@ -169,7 +181,7 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
     try {
       await diagramApi.updateDiagram(
         diagramId,
-        { title: title.trim(), modelJson },
+        { title: title.trim(), modelJson: payloadModel },
         etag ?? undefined
       );
       if (!mounted.current) return;
