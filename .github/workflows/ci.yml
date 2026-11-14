@@ -75,6 +75,9 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run build
+      # Unit test chạy bằng Node (không cần trình duyệt); *.browser.mjs cần Edge trên Windows nên chỉ chạy tay ở máy
+      - name: Test (node --test)
+        run: node --test tests/*.test.mjs
 
   compose:
     name: docker compose config
