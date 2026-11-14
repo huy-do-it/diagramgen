@@ -37,7 +37,7 @@ public sealed class NotificationEventHandler(INotificationEventRepository reposi
     {
         await ValidateAsync(e.Payload, ct);
         var x = e.Payload;
-        if (x.InviteeId != x.ActorUserId) Notify(x.InviteeId, e.Type, $"Lời mời tham gia {x.ProjectName}", $"/projects/{x.ProjectId}");
+        if (x.InviteeId != x.ActorUserId) Notify(x.InviteeId, e.Type, $"Lời mời tham gia {x.ProjectName}", "/invitations/mine");
     }
     public async Task HandleAsync(EventEnvelope<MemberAdded> e, CancellationToken ct)
     {

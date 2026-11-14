@@ -1,6 +1,6 @@
 import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '../../shared/api';
 import { DiagramTypeLabels } from './types';
 import type { DiagramSummary, DiagramStatus } from './types';
@@ -21,15 +21,30 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
 }) => {
   const notify = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
   const [diagrams, setDiagrams] = useState<DiagramSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [selectedType, setSelectedType] = useState<number | undefined>();
-  const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const type = Number(params.get('diagramType'));
+  const selectedType = Number.isInteger(type) && type >= 1 && type <= 5 ? type : undefined;
+  const status = params.get('diagramStatus') ?? '';
+  const selectedStatus = ['Draft', 'Pending', 'Rendering', 'Rendered', 'Failed'].includes(status) ? status : undefined;
+  const search = params.get('diagramSearch') ?? '';
+  const requestedPage = Number(params.get('diagramPage'));
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  function updateFilters(values: Record<string, string>) {
+    setParams(previous => {
+      const next = new URLSearchParams(previous);
+      for (const [key, value] of Object.entries(values)) {
+        if (value) next.set(key, value);
+        else next.delete(key);
+      }
+      return next;
+    }, { replace: true });
+  }
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -120,8 +135,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
           placeholder="Tìm theo tên sơ đồ..."
           value={search}
           onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
+            updateFilters({ diagramSearch: e.target.value, diagramPage: '' });
           }}
           style={{ maxWidth: '240px' }}
         />
@@ -130,8 +144,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
           className="input"
           value={selectedType || ''}
           onChange={(e) => {
-            setSelectedType(e.target.value ? Number(e.target.value) : undefined);
-            setPage(1);
+            updateFilters({ diagramType: e.target.value, diagramPage: '' });
           }}
           style={{ maxWidth: '180px' }}
         >
@@ -147,8 +160,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
           className="input"
           value={selectedStatus || ''}
           onChange={(e) => {
-            setSelectedStatus(e.target.value || undefined);
-            setPage(1);
+            updateFilters({ diagramStatus: e.target.value, diagramPage: '' });
           }}
           style={{ maxWidth: '160px' }}
         >
@@ -218,7 +230,9 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
                         className="button button-secondary button-small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/diagrams/${d.id}/edit`);
+                          navigate(`/diagrams/${d.id}/edit?projectId=${encodeURIComponent(projectId)}`, {
+                            state: { diagramListPath: location.pathname + location.search },
+                          });
                         }}
                         style={{ marginRight: '8px' }}
                       >
@@ -255,7 +269,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
           <button
             className="button button-secondary button-small"
             disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => updateFilters({ diagramPage: String(Math.max(1, page - 1)) })}
           >
             « Trang trước
           </button>
@@ -265,7 +279,7 @@ export const DiagramListPanel: React.FC<DiagramListPanelProps> = ({
           <button
             className="button button-secondary button-small"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => updateFilters({ diagramPage: String(Math.min(totalPages, page + 1)) })}
           >
             Trang sau »
           </button>
