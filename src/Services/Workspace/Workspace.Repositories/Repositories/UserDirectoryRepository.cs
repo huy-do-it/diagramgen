@@ -43,6 +43,15 @@ public class UserDirectoryRepository : GenericRepository<UserDirectory>, IUserDi
         return (items, totalCount);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, UserDirectory>> GetByIdsAsync(IEnumerable<Guid> userIds, CancellationToken ct = default)
+    {
+        var ids = userIds.Distinct().ToList();
+        return await _context.UserDirectory
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId, ct);
+    }
+
     public async Task UpsertUserAsync(UserDirectory user, CancellationToken ct = default)
     {
         var existing = await _context.UserDirectory.FirstOrDefaultAsync(u => u.UserId == user.UserId, ct);

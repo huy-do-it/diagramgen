@@ -8,4 +8,5 @@ public interface IUserDirectoryRepository : IGenericRepository<UserDirectory>
     Task<(IReadOnlyList<UserDirectory> Items, int TotalCount)> GetPagedUsersAsync(
         string? search, string? role, int page, int pageSize, CancellationToken ct = default);
     Task UpsertUserAsync(UserDirectory user, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<Guid, UserDirectory>> GetByIdsAsync(IEnumerable<Guid> userIds, CancellationToken ct = default);
 }
