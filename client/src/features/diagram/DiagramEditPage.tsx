@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { ApiError, flattenErrors } from '../../shared/api';
 import { useToast } from '../../shared/Toast';
 import { diagramApi } from './diagramApi';
@@ -85,6 +85,7 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
   const id = useId();
   const notify = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const mounted = useRef(false);
   const pending = useRef(false);
 
@@ -174,7 +175,7 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
       );
       if (!mounted.current) return;
       notify('Đã lưu thay đổi sơ đồ.');
-      navigate(`/diagrams/${diagramId}`);
+      navigate(`/diagrams/${diagramId}${location.search}`, { state: location.state });
     } catch (err: unknown) {
       if (!mounted.current) return;
       if (err instanceof ApiError && err.status === 412) {
@@ -210,7 +211,7 @@ export const DiagramEditPage: React.FC<DiagramEditPageProps> = ({ diagramId, onB
     if (onBack) {
       onBack();
     } else {
-      navigate(`/diagrams/${diagramId}`);
+      navigate(`/diagrams/${diagramId}${location.search}`, { state: location.state });
     }
   }
 
