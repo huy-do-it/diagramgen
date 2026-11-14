@@ -46,7 +46,7 @@ function NotificationList({ userId }: { userId: string }) {
       else await markAllRead(controller.signal);
       if (controller.signal.aborted) return;
       notifyRead(userId);
-      if (item) navigate(notificationLink(item.link));
+      if (item) navigate(notificationLink(item.link, item.type));
       else setNotice('Đã đánh dấu tất cả thông báo là đã đọc.');
     } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Không cập nhật được thông báo.'); }
     finally { if (!controller.signal.aborted) setBusy(false); }

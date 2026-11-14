@@ -32,10 +32,18 @@ public static class WebApplicationExtensions
                 problem.Extensions["code"] = problem is ValidationProblemDetails ? "VALIDATION" : $"HTTP_{problem.Status}";
         });
 
+        // DateTime luôn ra JSON kèm 'Z' (UTC) để client không hiểu nhầm là giờ địa phương
         builder.Services.AddControllers()
-            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(
-            options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+            });
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+        {
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.SerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+        });
 
         builder.Services.AddUmlForgeJwt(builder.Configuration);
         builder.Services.AddUmlForgeSwagger(serviceName);

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import type { ReactElement } from 'react';
-import { Route, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Route, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { DiagramViewPage } from './DiagramViewPage';
-import { DiagramEditPage } from './DiagramEditPage';
 import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { CreateDiagramModal } from './CreateDiagramModal';
 import { workspaceApi } from '../workspace/workspaceApi';
 import type { ProjectRole } from '../workspace/types';
+import { diagramListLink } from './diagramNavigation';
 
 export const diagramRoutes: ReactElement[] = [
   <Route key="project-diagram-list" path="projects/:projectId/diagrams" element={<DiagramListWrapper />} />,
@@ -23,11 +23,7 @@ export const diagramRoutes: ReactElement[] = [
     path="diagrams/:diagramId"
     element={<DiagramStudioLayout><DiagramViewWrapper /></DiagramStudioLayout>}
   />,
-  <Route
-    key="diagram-edit"
-    path="diagrams/:diagramId/edit"
-    element={<DiagramStudioLayout><DiagramEditWrapper /></DiagramStudioLayout>}
-  />,
+  // Trang sửa "diagrams/:diagramId/edit" là editor UI-06 (features/editor/routes.tsx) — không khai báo trùng ở đây
   <Route
     key="diagram-review"
     path="reviews"
@@ -52,6 +48,8 @@ function DiagramListWrapper() {
 function ProjectDiagramList() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const diagramNavigation = { state: { diagramListPath: location.pathname + location.search } };
   const { user } = useAuth();
   const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const projectId = routeProjectId ?? searchParams.get('projectId');
@@ -75,14 +73,14 @@ function ProjectDiagramList() {
         key={projectId}
         projectId={projectId}
         canEdit={canEdit}
-        onSelectDiagram={(id) => { navigate(`/diagrams/${id}?projectId=${encodeURIComponent(projectId)}`); }}
+        onSelectDiagram={(id) => { navigate(`/diagrams/${id}?projectId=${encodeURIComponent(projectId)}`, diagramNavigation); }}
         onCreateNew={() => setShowCreateModal(true)}
       />
 
       {showCreateModal && <CreateDiagramModal
         projectId={projectId}
         onClose={() => setShowCreateModal(false)}
-        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(projectId)}`)}
+        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(projectId)}`, diagramNavigation)}
       />}
     </div>
   );
@@ -92,6 +90,7 @@ function DiagramViewWrapper() {
   const { diagramId = '' } = useParams<{ diagramId: string }>();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const canEdit = user?.role !== 'Lecturer';
 
@@ -101,23 +100,7 @@ function DiagramViewWrapper() {
       projectId={params.get('projectId') ?? undefined}
       diagramId={diagramId}
       canEdit={canEdit}
-      onBack={(projectId) => {
-        if (projectId) navigate(`/projects/${projectId}`);
-        else navigate('/projects');
-      }}
-    />
-  );
-}
-
-function DiagramEditWrapper() {
-  const { diagramId = '' } = useParams<{ diagramId: string }>();
-  const navigate = useNavigate();
-
-  return (
-    <DiagramEditPage
-      key={diagramId}
-      diagramId={diagramId}
-      onBack={() => navigate(`/diagrams/${diagramId}`)}
+      onBack={(projectId) => navigate(diagramListLink(projectId, location.state?.diagramListPath))}
     />
   );
 }
@@ -133,6 +116,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [role, setRole] = useState<ProjectRole | null>(null);
+  const [projectName, setProjectName] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -155,6 +139,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
         return;
       }
       setRole(membership.role);
+      setProjectName(project.name);
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) {
         setError(error instanceof Error ? error.message : 'Không tải được quyền truy cập dự án.');
@@ -178,6 +163,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
     <ReviewPanel
       key={projectId}
       projectId={projectId}
+      projectName={projectName}
       isLeader={role === 'Leader'}
       isLecturer={role === 'Lecturer'}
     />
@@ -188,5 +174,4 @@ export * from './types';
 export * from './diagramApi';
 export * from './DiagramListPanel';
 export * from './DiagramViewPage';
-export * from './DiagramEditPage';
 export * from './ReviewPanel';

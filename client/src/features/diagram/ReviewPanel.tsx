@@ -5,11 +5,13 @@ import { diagramApi } from './diagramApi';
 
 interface ReviewPanelProps {
   projectId: string;
+  /** Tên dự án để đặt tên file ZIP xuất ra; thiếu thì dùng id. */
+  projectName?: string;
   isLeader?: boolean;
   isLecturer?: boolean;
 }
 
-export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = false, isLecturer = false }) => {
+export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, projectName, isLeader = false, isLecturer = false }) => {
   const notify = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,9 @@ export const ReviewPanel: React.FC<ReviewPanelProps> = ({ projectId, isLeader = 
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `diagrams-${projectId}.zip`;
+                // Bỏ ký tự không hợp lệ trong tên file Windows: CampusEats → CampusEats-uml.zip
+                const fileBase = (projectName?.trim() || projectId).replace(/[\\/:*?"<>|]+/g, '_');
+                link.download = `${fileBase}-uml.zip`;
                 link.click();
                 window.setTimeout(() => URL.revokeObjectURL(url), 1000);
               } catch (error) {

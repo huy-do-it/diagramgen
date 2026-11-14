@@ -652,7 +652,7 @@ public class DiagramServiceTests
 
     [Fact]
     [Trait("BR", "BR-14")]
-    public async Task RequestRender_WhenStatusIsRendered_TransitionsToPending_And_EnqueuesOutboxMessage()
+    public async Task RequestRender_WhenStatusIsRendered_RejectsWithoutChangingResultOrOutbox()
     {
         // Arrange
         await _memberAccessRepository.AddAsync(new MemberAccess
@@ -677,15 +677,17 @@ public class DiagramServiceTests
         await _diagramRepository.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
 
-        // Act
-        var result = await _service.RequestRenderAsync(diagram.Id);
-
-        // Assert
-        result.Status.Should().Be(DiagramStatus.Pending);
+        var act = () => _service.RequestRenderAsync(diagram.Id);
+        var error = await act.Should().ThrowAsync<BusinessRuleException>();
+        error.Which.Status.Should().Be(409);
+        error.Which.Code.Should().Be("BR-14");
 
         var updatedDiagram = await _diagramRepository.GetByIdAsync(diagram.Id);
-        updatedDiagram!.Status.Should().Be(DiagramStatus.Pending);
-        updatedDiagram.SvgXml.Should().Be("<svg>existing</svg>"); // giữ SVG cũ trong khi render lại
+        updatedDiagram!.Status.Should().Be(DiagramStatus.Rendered);
+        updatedDiagram.CurrentVersion.Should().Be(1);
+        updatedDiagram.SvgXml.Should().Be("<svg>existing</svg>");
+        (await _dbContext.OutboxMessages.CountAsync()).Should().Be(0);
+        _dbContext.ChangeTracker.HasChanges().Should().BeFalse();
     }
 
     [Fact]
@@ -751,7 +753,7 @@ public class DiagramServiceTests
 
     [Fact]
     [Trait("BR", "BR-14")]
-    public async Task RequestRender_WhenStatusIsFailed_TransitionsToPending_And_EnqueuesOutboxMessage()
+    public async Task RequestRender_WhenStatusIsFailed_RejectsWithoutImplicitRetryOrOutbox()
     {
         // Arrange
         await _memberAccessRepository.AddAsync(new MemberAccess
@@ -776,20 +778,17 @@ public class DiagramServiceTests
         await _diagramRepository.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
 
-        // Act
-        var result = await _service.RequestRenderAsync(diagram.Id);
-
-        // Assert (BR-14: Failed -> Pending)
-        result.Status.Should().Be(DiagramStatus.Pending);
+        var act = () => _service.RequestRenderAsync(diagram.Id);
+        var error = await act.Should().ThrowAsync<BusinessRuleException>();
+        error.Which.Status.Should().Be(409);
+        error.Which.Code.Should().Be("BR-14");
 
         var updatedDiagram = await _diagramRepository.GetByIdAsync(diagram.Id);
-        updatedDiagram!.Status.Should().Be(DiagramStatus.Pending);
-
-        var outboxMessages = await _dbContext.OutboxMessages.ToListAsync();
-        outboxMessages.Should().ContainSingle();
-        var outbox = outboxMessages.First();
-        outbox.Type.Should().Be("RenderRequested");
-        outbox.Stream.Should().Be("diagram.events");
+        updatedDiagram!.Status.Should().Be(DiagramStatus.Failed);
+        updatedDiagram.CurrentVersion.Should().Be(1);
+        updatedDiagram.LastError.Should().Be("PlantUML compilation error");
+        (await _dbContext.OutboxMessages.CountAsync()).Should().Be(0);
+        _dbContext.ChangeTracker.HasChanges().Should().BeFalse();
     }
 
     [Fact]
