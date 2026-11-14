@@ -284,7 +284,7 @@ function ProjectDetailContent() {
                 className="button button-primary button-small"
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Đang lưu...' : 'Lưu thông tin (BR-16 ETag)'}
+                {actionLoading ? 'Đang lưu...' : 'Lưu thông tin'}
               </button>
             </div>
           </form>
@@ -324,7 +324,6 @@ function ProjectDetailContent() {
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-muted)' }}>
               <span>📅 Ngày tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}</span>
               <span>👥 Số thành viên: {studentMemberCount}/5</span>
-              <span>🔒 Optimistic Concurrency Token: <code>{project.rowVersion ? 'ETag Active' : 'None'}</code></span>
             </div>
           </div>
         )}
