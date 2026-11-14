@@ -1,3 +1,6 @@
+import { useToast } from '../../shared/Toast';
+import { LoadingState, LoadError, requestErrorMessage } from '../../shared/PageState';
+import { Modal } from '../../shared/Modal';
 import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
@@ -15,6 +18,7 @@ export function ProjectDetailPage() {
 }
 
 function ProjectDetailContent() {
+  const notify = useToast();
   const mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const { id } = useParams<{ id: string }>();
@@ -61,6 +65,7 @@ function ProjectDetailContent() {
   const fetchProject = useCallback(async () => {
     if (!id) return;
     setLoading(true);
+    setMessage(null);
     try {
       const data = await workspaceApi.getProject(id);
       if (!mounted.current) return;
@@ -70,7 +75,7 @@ function ProjectDetailContent() {
       setEditDesc(data.project.description || '');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
+        setMessage({ text: requestErrorMessage(err, 'Không tải được thông tin dự án.'), type: 'error' });
       } else {
         setMessage({ text: 'Không tải được thông tin dự án.', type: 'error' });
       }
@@ -105,11 +110,11 @@ function ProjectDetailContent() {
 
       setProject(updated);
       setEditingInfo(false);
-      setMessage({ text: 'Cập nhật thông tin dự án thành công!', type: 'success' });
+      notify('Cập nhật thông tin dự án thành công!');
       await fetchProject();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
+        setMessage({ text: requestErrorMessage(err, 'Không tải được thông tin dự án.'), type: 'error' });
       } else {
         setMessage({ text: 'Không thể cập nhật thông tin dự án.', type: 'error' });
       }
@@ -129,7 +134,7 @@ function ProjectDetailContent() {
       navigate('/projects', { replace: true });
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
+        setMessage({ text: requestErrorMessage(err, 'Không tải được thông tin dự án.'), type: 'error' });
       } else {
         setMessage({ text: 'Xóa dự án thất bại.', type: 'error' });
       }
@@ -152,11 +157,11 @@ function ProjectDetailContent() {
     setMessage(null);
     try {
       await workspaceApi.removeMember(id, member.userId);
-      setMessage({ text: `Đã xóa thành viên "${member.username}" khỏi dự án.`, type: 'success' });
+      notify(`Đã xóa thành viên "${member.username}" khỏi dự án.`);
       await fetchProject();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
+        setMessage({ text: requestErrorMessage(err, 'Không tải được thông tin dự án.'), type: 'error' });
       } else {
         setMessage({ text: 'Không thể xóa thành viên.', type: 'error' });
       }
@@ -166,12 +171,14 @@ function ProjectDetailContent() {
   }
 
   async function openLecturerModal() {
+    setMessage(null);
+    setSelectedLecturerId('');
     setShowLecturerModal(true);
     setLoadingLecturers(true);
     try {
       const res = await workspaceApi.getDirectoryUsers({ role: 'Lecturer', pageSize: 50 });
       setLecturers(res.items);
-      if (res.items.length > 0 && !selectedLecturerId) {
+      if (res.items.length > 0) {
         setSelectedLecturerId(res.items[0].userId);
       }
     } catch {
@@ -190,11 +197,11 @@ function ProjectDetailContent() {
     try {
       await workspaceApi.assignLecturer(id, selectedLecturerId);
       setShowLecturerModal(false);
-      setMessage({ text: 'Gán Giảng viên hướng dẫn thành công (BR-10)!', type: 'success' });
+      notify('Gán Giảng viên hướng dẫn thành công (BR-10)!');
       await fetchProject();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
+        setMessage({ text: requestErrorMessage(err, 'Không tải được thông tin dự án.'), type: 'error' });
       } else {
         setMessage({ text: 'Gán giảng viên thất bại.', type: 'error' });
       }
@@ -204,13 +211,14 @@ function ProjectDetailContent() {
   }
 
   if (loading) {
-    return <p className="muted" style={{ padding: 40, textAlign: 'center' }}>Đang tải thông tin dự án...</p>;
+    return <div className="feature-page"><LoadingState label="Đang tải thông tin dự án…" /></div>;
   }
 
   if (!project) {
     return (
-      <div className="panel" style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <div className="feature-page panel" style={{ textAlign: 'center', padding: '60px 20px' }}>
         <h2>Không tìm thấy dự án</h2>
+        {message && <LoadError message={message.text} onRetry={fetchProject} />}
         <p className="muted">Dự án này không tồn tại hoặc bạn không có quyền truy cập.</p>
         <Link to="/projects" className="button button-primary">
           &larr; Về danh sách dự án
@@ -220,16 +228,16 @@ function ProjectDetailContent() {
   }
 
   return (
-    <div>
+    <div className="feature-page">
       {/* Header Back & Actions */}
       <div style={{ marginBottom: 16 }}>
-        <Link to="/projects" style={{ textDecoration: 'none', color: '#687389', fontSize: 13, fontWeight: 600 }}>
+        <Link to="/projects" style={{ textDecoration: 'none', color: 'var(--color-muted)', fontSize: 13, fontWeight: 600 }}>
           &larr; Quay lại danh sách dự án
         </Link>
       </div>
 
       {message && (
-        <div className={message.type === 'success' ? 'notice' : 'form-error'} style={{ marginBottom: 20 }}>
+        <div role="alert" className="notice danger" style={{ marginBottom: 20 }}>
           {message.text}
         </div>
       )}
@@ -237,7 +245,7 @@ function ProjectDetailContent() {
       {/* Project Banner Card */}
       <div className="panel" style={{ marginBottom: 20 }}>
         {editingInfo ? (
-          <form onSubmit={handleUpdateInfo}>
+          <form onSubmit={handleUpdateInfo} aria-busy={actionLoading}>
             <div style={{ marginBottom: 14 }}>
               <label className="field-label" htmlFor="edit-name">Tên dự án</label>
               <input
@@ -285,7 +293,7 @@ function ProjectDetailContent() {
             <div className="panel-header" style={{ marginBottom: 12 }}>
               <div>
                 <span className="welcome-tag" style={{ marginBottom: 6 }}>DỰ ÁN CAPSTONE</span>
-                <h1 style={{ margin: 0, fontSize: 26, color: '#172c75' }}>{project.name}</h1>
+                <h1 style={{ margin: 0, color: 'var(--color-text)' }}>{project.name}</h1>
               </div>
 
               {isLeader && (
@@ -313,7 +321,7 @@ function ProjectDetailContent() {
               {project.description || 'Chưa có mô tả chi tiết cho dự án này.'}
             </p>
 
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: '#8a94a6' }}>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-muted)' }}>
               <span>📅 Ngày tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}</span>
               <span>👥 Số thành viên: {studentMemberCount}/5</span>
               <span>🔒 Optimistic Concurrency Token: <code>{project.rowVersion ? 'ETag Active' : 'None'}</code></span>
@@ -379,15 +387,15 @@ function ProjectDetailContent() {
             )}
           </div>
 
-          <div className="table-wrap">
+          <div className="table-wrap" role="region" aria-label="Danh sách thành viên" tabIndex={0}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Tên người dùng</th>
-                  <th>Họ và tên</th>
-                  <th>Vai trò trong nhóm</th>
-                  <th>Ngày tham gia</th>
-                  {isLeader && <th style={{ textAlign: 'right' }}>Thao tác</th>}
+                  <th scope="col">Tên người dùng</th>
+                  <th scope="col">Họ và tên</th>
+                  <th scope="col">Vai trò trong nhóm</th>
+                  <th scope="col">Ngày tham gia</th>
+                  {isLeader && <th scope="col" style={{ textAlign: 'right' }}>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
@@ -396,7 +404,7 @@ function ProjectDetailContent() {
                     <td>
                       <strong>{member.username}</strong>
                       {member.userId === currentUser?.id && (
-                        <span className="status-badge" style={{ marginLeft: 8, background: '#eff6ff', color: '#1d4ed8' }}>
+                        <span className="status-badge" style={{ marginLeft: 8, background: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
                           (Bạn)
                         </span>
                       )}
@@ -467,7 +475,7 @@ function ProjectDetailContent() {
           onClose={() => setShowInviteModal(false)}
           onSuccess={() => {
             setShowInviteModal(false);
-            setMessage({ text: 'Đã gửi lời mời tham gia dự án thành công!', type: 'success' });
+            notify('Đã gửi lời mời tham gia dự án thành công!');
             fetchProject();
           }}
         />
@@ -475,35 +483,26 @@ function ProjectDetailContent() {
 
       {/* Assign Lecturer Modal */}
       {showLecturerModal && (
-        <div className="modal-backdrop" onClick={() => setShowLecturerModal(false)}>
-          <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Gán Giảng viên hướng dẫn (BR-10)</h2>
-              <button
-                type="button"
-                className="button button-secondary button-small"
-                onClick={() => setShowLecturerModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal title="Gán Giảng viên hướng dẫn" onClose={() => setShowLecturerModal(false)} busy={actionLoading} className="feature-page">
             <p className="muted" style={{ marginBottom: 16 }}>
               Theo quy chuẩn <strong>BR-10</strong>, chỉ những tài khoản có vai trò <strong>Lecturer</strong> trong Danh bạ nhân bản mới được gán làm GVHD cho dự án.
             </p>
 
+            {message && <LoadError message={message.text} onRetry={openLecturerModal} />}
             {loadingLecturers ? (
-              <p className="muted">Đang tải danh sách giảng viên...</p>
+              <LoadingState label="Đang tải danh sách giảng viên…" />
             ) : (
-              <form onSubmit={handleAssignLecturer}>
+              <form onSubmit={handleAssignLecturer} aria-busy={actionLoading}><fieldset disabled={actionLoading}>
                 <div style={{ marginBottom: 20 }}>
+                  {lecturers.length === 0 && !message && <p role="status">Chưa có giảng viên trong danh bạ. Hãy thử lại sau.</p>}
                   <label className="field-label" htmlFor="select-lecturer">
                     Chọn Giảng viên hướng dẫn
                   </label>
                   <select
-                    id="select-lecturer"
+                    id="select-lecturer" data-autofocus
                     className="select"
                     value={selectedLecturerId}
+                    disabled={loadingLecturers || lecturers.length === 0}
                     onChange={e => setSelectedLecturerId(e.target.value)}
                     style={{ width: '100%', maxWidth: '100%' }}
                     required
@@ -532,10 +531,9 @@ function ProjectDetailContent() {
                     {actionLoading ? 'Đang gán...' : 'Xác nhận gán GVHD'}
                   </button>
                 </div>
-              </form>
+              </fieldset></form>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
       {showCreateDiagramModal && <CreateDiagramModal
         projectId={project.id}
