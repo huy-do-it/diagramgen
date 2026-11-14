@@ -3,11 +3,12 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import './feedback.css';
 
-export function Modal({ title, children, onClose, busy = false }: {
+export function Modal({ title, children, onClose, busy = false, className = '' }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -23,7 +24,7 @@ export function Modal({ title, children, onClose, busy = false }: {
   }, []);
   useEffect(() => { if (busy) dialog.current?.focus(); }, [busy]);
 
-  return createPortal(<dialog ref={dialog} className="modal feedback-dialog" tabIndex={-1} aria-modal="true" aria-labelledby={titleId}
+  return createPortal(<dialog ref={dialog} className={`modal feedback-dialog ${className}`} tabIndex={-1} aria-modal="true" aria-labelledby={titleId}
     onKeyDown={event => {
       if (event.key === 'Escape') {
         event.preventDefault();

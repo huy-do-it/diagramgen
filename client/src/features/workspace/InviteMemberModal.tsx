@@ -1,3 +1,5 @@
+import { Modal } from '../../shared/Modal';
+import { LoadingState, LoadError } from '../../shared/PageState';
 import { useState, useEffect, type FormEvent } from 'react';
 import { ApiError } from '../../shared/api';
 import { workspaceApi } from './workspaceApi';
@@ -22,11 +24,18 @@ export function InviteMemberModal({
   const [directoryUsers, setDirectoryUsers] = useState<UserDirectoryItem[]>([]);
   const [selectedUsername, setSelectedUsername] = useState('');
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchRevision, setSearchRevision] = useState(0);
+  const [searchComplete, setSearchComplete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    setSearchError(null);
+    setSearchComplete(false);
+    setSearching(false);
+    setDirectoryUsers([]);
     if (!searchTerm.trim()) {
       setDirectoryUsers([]);
       return;
@@ -42,9 +51,10 @@ export function InviteMemberModal({
         });
         if (active) {
           setDirectoryUsers(res.items);
+          setSearchComplete(true);
         }
       } catch {
-        // bỏ qua lỗi live search
+        if (active) setSearchError('Không tải được danh bạ. Bạn có thể thử lại hoặc nhập tên đăng nhập trực tiếp.');
       } finally {
         if (active) setSearching(false);
       }
@@ -54,7 +64,7 @@ export function InviteMemberModal({
       active = false;
       clearTimeout(timer);
     };
-  }, [searchTerm]);
+  }, [searchTerm, searchRevision]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -80,15 +90,7 @@ export function InviteMemberModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Mời thành viên vào dự án</h2>
-          <button type="button" className="button button-secondary button-small" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
+    <Modal title="Mời thành viên vào dự án" onClose={onClose} busy={submitting} className="feature-page">
         <p className="muted" style={{ marginBottom: 16 }}>
           Dự án: <strong>{projectName}</strong> (Hiện có {currentMemberCount}/5 thành viên).
         </p>
@@ -97,15 +99,15 @@ export function InviteMemberModal({
           💡 <strong>Quy định BR-07:</strong> Mỗi dự án đồ án có tối đa <strong>5 thành viên</strong> (không tính Giảng viên hướng dẫn). Lời mời sẽ có hiệu lực trong vòng 7 ngày (BR-09).
         </div>
 
-        {error && <div className="form-error" style={{ marginBottom: 16 }}>{error}</div>}
+        {error && <div id="invite-error" role="alert" className="form-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-busy={submitting}><fieldset disabled={submitting}>
           <div style={{ marginBottom: 16 }}>
             <label className="field-label" htmlFor="member-search">
-              Tìm sinh viên từ Danh bạ nhân bản
+              Tìm sinh viên trong danh bạ
             </label>
             <input
-              id="member-search"
+              id="member-search" data-autofocus
               type="text"
               placeholder="Nhập username hoặc tên sinh viên..."
               value={searchTerm}
@@ -115,21 +117,23 @@ export function InviteMemberModal({
               }}
               disabled={submitting}
             />
-            {searching && <span style={{ fontSize: 12, color: '#687389', marginTop: 4, display: 'block' }}>Đang tìm kiếm...</span>}
+            {searching && <LoadingState label="Đang tìm sinh viên…" />}
+            {searchError && <LoadError message={searchError} onRetry={() => setSearchRevision(value => value + 1)} />}
+            {searchComplete && !searching && !searchError && directoryUsers.length === 0 && <p role="status">Không tìm thấy sinh viên. Bạn có thể nhập tên đăng nhập bên dưới.</p>}
 
             {directoryUsers.length > 0 && (
               <div
                 style={{
                   marginTop: 8,
-                  border: '1px solid #d9dfea',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: 8,
-                  background: '#fff',
+                  background: 'var(--color-surface)',
                   maxHeight: 180,
                   overflowY: 'auto',
                 }}
               >
                 {directoryUsers.map(u => (
-                  <div
+                  <button type="button" className="directory-option" disabled={u.isLocked || submitting}
                     key={u.userId}
                     onClick={() => {
                       setSelectedUsername(u.username);
@@ -139,11 +143,11 @@ export function InviteMemberModal({
                     style={{
                       padding: '10px 14px',
                       cursor: u.isLocked ? 'not-allowed' : 'pointer',
-                      borderBottom: '1px solid #f1f3f8',
+                      borderBottom: '1px solid var(--color-border-soft)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: selectedUsername === u.username ? '#edf0ff' : 'transparent',
+                      background: selectedUsername === u.username ? 'var(--color-primary-tint)' : 'transparent',
                     }}
                   >
                     <div>
@@ -154,7 +158,7 @@ export function InviteMemberModal({
                     ) : (
                       <span className="status-badge">{u.role}</span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -166,6 +170,8 @@ export function InviteMemberModal({
             </label>
             <input
               id="selected-username"
+              aria-invalid={!!error}
+              aria-describedby={error ? 'invite-error' : undefined}
               type="text"
               placeholder="Ví dụ: student2"
               value={selectedUsername}
@@ -187,9 +193,8 @@ export function InviteMemberModal({
               {submitting ? 'Đang gửi...' : 'Gửi lời mời'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </fieldset></form>
+    </Modal>
   );
 }
 
