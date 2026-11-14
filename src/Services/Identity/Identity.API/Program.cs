@@ -17,8 +17,9 @@ using UMLForge.BuildingBlocks.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers & Swagger
-builder.Services.AddControllers();
+// Controllers & Swagger — DateTime ra JSON kèm 'Z' (UTC) như các service dùng BuildingBlocks.Web
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new UMLForge.Contracts.Events.UtcDateTimeJsonConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

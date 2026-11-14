@@ -3,7 +3,6 @@ import type { ReactElement } from 'react';
 import { Route, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { DiagramViewPage } from './DiagramViewPage';
-import { DiagramEditPage } from './DiagramEditPage';
 import { DiagramListPanel } from './DiagramListPanel';
 import { ReviewPanel } from './ReviewPanel';
 import { CreateDiagramModal } from './CreateDiagramModal';
@@ -24,11 +23,7 @@ export const diagramRoutes: ReactElement[] = [
     path="diagrams/:diagramId"
     element={<DiagramStudioLayout><DiagramViewWrapper /></DiagramStudioLayout>}
   />,
-  <Route
-    key="diagram-edit"
-    path="diagrams/:diagramId/edit"
-    element={<DiagramStudioLayout><DiagramEditWrapper /></DiagramStudioLayout>}
-  />,
+  // Trang sửa "diagrams/:diagramId/edit" là editor UI-06 (features/editor/routes.tsx) — không khai báo trùng ở đây
   <Route
     key="diagram-review"
     path="reviews"
@@ -110,20 +105,6 @@ function DiagramViewWrapper() {
   );
 }
 
-function DiagramEditWrapper() {
-  const { diagramId = '' } = useParams<{ diagramId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  return (
-    <DiagramEditPage
-      key={diagramId}
-      diagramId={diagramId}
-      onBack={() => navigate(`/diagrams/${diagramId}${location.search}`, { state: location.state })}
-    />
-  );
-}
-
 function ReviewPanelWrapper() {
   const [searchParams] = useSearchParams();
   const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
@@ -135,6 +116,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [role, setRole] = useState<ProjectRole | null>(null);
+  const [projectName, setProjectName] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -157,6 +139,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
         return;
       }
       setRole(membership.role);
+      setProjectName(project.name);
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) {
         setError(error instanceof Error ? error.message : 'Không tải được quyền truy cập dự án.');
@@ -180,6 +163,7 @@ function ProjectReview({ projectId }: { projectId: string | null }) {
     <ReviewPanel
       key={projectId}
       projectId={projectId}
+      projectName={projectName}
       isLeader={role === 'Leader'}
       isLecturer={role === 'Lecturer'}
     />
@@ -190,5 +174,4 @@ export * from './types';
 export * from './diagramApi';
 export * from './DiagramListPanel';
 export * from './DiagramViewPage';
-export * from './DiagramEditPage';
 export * from './ReviewPanel';
