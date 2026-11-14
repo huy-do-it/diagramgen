@@ -19,7 +19,9 @@ export function onRead(userId: string, refresh: () => void) {
   return () => window.removeEventListener(changed, handler);
 }
 // Chỉ cho phép link nội bộ đã quy ước, không điều hướng URL tùy ý từ payload.
-export function notificationLink(link: string) {
+export function notificationLink(link: string, type?: string) {
+  // Lời mời cũ lưu link project; người nhận chỉ có quyền vào project sau khi chấp nhận.
+  if (type === 'InvitationSent' || link === '/invitations/mine') return '/invitations/mine';
   return /^\/(?:diagrams|projects)(?:\/[0-9a-f-]{36})?(?:\?tab=review)?$/i.test(link) ? link : '/notifications';
 }
 export function notificationTime(value: string) {

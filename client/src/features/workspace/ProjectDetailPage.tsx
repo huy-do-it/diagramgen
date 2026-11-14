@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../shared/api';
 import { workspaceApi } from './workspaceApi';
@@ -20,6 +20,8 @@ function ProjectDetailContent() {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [etag, setEtag] = useState<string | null>(null);
@@ -28,7 +30,17 @@ function ProjectDetailContent() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'members' | 'diagrams' | 'reviews'>('members');
+  const tab = searchParams.get('tab');
+  const activeTab = tab === 'diagrams' ? 'diagrams' : tab === 'review' || tab === 'reviews' ? 'reviews' : 'members';
+  function setActiveTab(value: 'members' | 'diagrams' | 'reviews') {
+    setSearchParams(previous => {
+      const next = new URLSearchParams(previous);
+      if (value === 'members') next.delete('tab');
+      else next.set('tab', value === 'reviews' ? 'review' : value);
+      return next;
+    });
+  }
+  const diagramNavigation = { state: { diagramListPath: location.pathname + location.search } };
 
   // Edit Project State
   const [editingInfo, setEditingInfo] = useState(false);
@@ -430,7 +442,7 @@ function ProjectDetailContent() {
           <DiagramListPanel
             projectId={project.id}
             canEdit={!isLecturer && (isLeader || isMember)}
-            onSelectDiagram={(diagramId) => navigate(`/diagrams/${diagramId}?projectId=${encodeURIComponent(project.id)}`)}
+            onSelectDiagram={(diagramId) => navigate(`/diagrams/${diagramId}?projectId=${encodeURIComponent(project.id)}`, diagramNavigation)}
             onCreateNew={() => setShowCreateDiagramModal(true)}
           />
         </div>
@@ -528,7 +540,7 @@ function ProjectDetailContent() {
       {showCreateDiagramModal && <CreateDiagramModal
         projectId={project.id}
         onClose={() => setShowCreateDiagramModal(false)}
-        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(project.id)}`)}
+        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(project.id)}`, diagramNavigation)}
       />}
     </div>
   );

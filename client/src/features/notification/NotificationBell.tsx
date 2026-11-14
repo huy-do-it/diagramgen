@@ -58,7 +58,7 @@ function Bell({ userId }: { userId: string }) {
     const controller = new AbortController(); mutation.current = controller; setBusy(true); setError('');
     try {
       if (!item.isRead) { await markRead(item.id, controller.signal); if (controller.signal.aborted) return; notifyRead(userId); }
-      setOpen(false); navigate(notificationLink(item.link));
+      setOpen(false); navigate(notificationLink(item.link, item.type));
     } catch (e) { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Không đánh dấu được thông báo.'); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   }

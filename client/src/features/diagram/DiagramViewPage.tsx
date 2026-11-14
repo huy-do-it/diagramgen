@@ -1,7 +1,7 @@
 import { Modal } from '../../shared/Modal';
 import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
@@ -27,6 +27,7 @@ function sanitizeSvg(svg: string): string {
 export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, projectId, onBack, canEdit = true }) => {
   const notify = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [diagram, setDiagram] = useState<DiagramDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -213,7 +214,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
           {canEdit && (
             <button
               className="button button-secondary"
-              onClick={() => navigate(`/diagrams/${diagramId}/edit`)}
+              onClick={() => navigate(`/diagrams/${diagramId}/edit?projectId=${encodeURIComponent(diagram.projectId)}`, { state: location.state })}
             >
               ✏️ Chỉnh sửa sơ đồ
             </button>

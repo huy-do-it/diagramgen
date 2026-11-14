@@ -41,7 +41,11 @@ public sealed class NotificationEventHandlerTests
     {
         await Send(Handler(), new InvitationSent(Guid.NewGuid(), project, "Project", member, self ? member : leader));
         Assert.Equal(self ? 0 : 1, notifications.Count);
-        if (!self) Assert.Equal(member, notifications[0].UserId);
+        if (!self)
+        {
+            Assert.Equal(member, notifications[0].UserId);
+            Assert.Equal("/invitations/mine", notifications[0].Link);
+        }
     }
     [Fact, Trait("BR", "BR-34")]
     public async Task HandleAsync_ReviewSubmitted_NotifiesLecturerOnly()

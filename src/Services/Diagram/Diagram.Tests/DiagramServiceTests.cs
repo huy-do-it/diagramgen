@@ -652,7 +652,7 @@ public class DiagramServiceTests
 
     [Fact]
     [Trait("BR", "BR-14")]
-    public async Task RequestRender_WhenStatusIsRendered_ThrowsConflictAndKeepsDiagram()
+    public async Task RequestRender_WhenStatusIsRendered_RejectsWithoutChangingResultOrOutbox()
     {
         // Arrange
         await _memberAccessRepository.AddAsync(new MemberAccess
@@ -677,18 +677,17 @@ public class DiagramServiceTests
         await _diagramRepository.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
 
-        // Act: render lại cùng phiên bản đã Rendered (R16: Render sẽ bỏ qua theo BR-26 → phải chặn từ Diagram)
         var act = () => _service.RequestRenderAsync(diagram.Id);
+        var error = await act.Should().ThrowAsync<BusinessRuleException>();
+        error.Which.Status.Should().Be(409);
+        error.Which.Code.Should().Be("BR-14");
 
-        // Assert
-        var ex = await act.Should().ThrowAsync<BusinessRuleException>();
-        ex.Which.Code.Should().Be("BR-14");
-        ex.Which.Status.Should().Be(409);
-
-        var unchanged = await _diagramRepository.GetByIdAsync(diagram.Id);
-        unchanged!.Status.Should().Be(DiagramStatus.Rendered);
-        unchanged.SvgXml.Should().Be("<svg>existing</svg>");
+        var updatedDiagram = await _diagramRepository.GetByIdAsync(diagram.Id);
+        updatedDiagram!.Status.Should().Be(DiagramStatus.Rendered);
+        updatedDiagram.CurrentVersion.Should().Be(1);
+        updatedDiagram.SvgXml.Should().Be("<svg>existing</svg>");
         (await _dbContext.OutboxMessages.CountAsync()).Should().Be(0);
+        _dbContext.ChangeTracker.HasChanges().Should().BeFalse();
     }
 
     [Fact]
@@ -754,7 +753,7 @@ public class DiagramServiceTests
 
     [Fact]
     [Trait("BR", "BR-14")]
-    public async Task RequestRender_WhenStatusIsFailed_ThrowsConflictAndKeepsError()
+    public async Task RequestRender_WhenStatusIsFailed_RejectsWithoutImplicitRetryOrOutbox()
     {
         // Arrange
         await _memberAccessRepository.AddAsync(new MemberAccess
@@ -779,18 +778,17 @@ public class DiagramServiceTests
         await _diagramRepository.AddAsync(diagram);
         await _dbContext.SaveChangesAsync();
 
-        // Act: render lại phiên bản đã Failed mà không sửa (muốn render lại phải tạo phiên bản mới hoặc Admin Retry)
         var act = () => _service.RequestRenderAsync(diagram.Id);
+        var error = await act.Should().ThrowAsync<BusinessRuleException>();
+        error.Which.Status.Should().Be(409);
+        error.Which.Code.Should().Be("BR-14");
 
-        // Assert
-        var ex = await act.Should().ThrowAsync<BusinessRuleException>();
-        ex.Which.Code.Should().Be("BR-14");
-        ex.Which.Status.Should().Be(409);
-
-        var unchanged = await _diagramRepository.GetByIdAsync(diagram.Id);
-        unchanged!.Status.Should().Be(DiagramStatus.Failed);
-        unchanged.LastError.Should().Be("PlantUML compilation error");
+        var updatedDiagram = await _diagramRepository.GetByIdAsync(diagram.Id);
+        updatedDiagram!.Status.Should().Be(DiagramStatus.Failed);
+        updatedDiagram.CurrentVersion.Should().Be(1);
+        updatedDiagram.LastError.Should().Be("PlantUML compilation error");
         (await _dbContext.OutboxMessages.CountAsync()).Should().Be(0);
+        _dbContext.ChangeTracker.HasChanges().Should().BeFalse();
     }
 
     [Fact]

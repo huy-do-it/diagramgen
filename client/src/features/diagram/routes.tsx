@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ReactElement } from 'react';
-import { Route, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Route, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/AuthContext';
 import { DiagramViewPage } from './DiagramViewPage';
 import { DiagramListPanel } from './DiagramListPanel';
@@ -8,6 +8,7 @@ import { ReviewPanel } from './ReviewPanel';
 import { CreateDiagramModal } from './CreateDiagramModal';
 import { workspaceApi } from '../workspace/workspaceApi';
 import type { ProjectRole } from '../workspace/types';
+import { diagramListLink } from './diagramNavigation';
 
 export const diagramRoutes: ReactElement[] = [
   <Route key="project-diagram-list" path="projects/:projectId/diagrams" element={<DiagramListWrapper />} />,
@@ -47,6 +48,8 @@ function DiagramListWrapper() {
 function ProjectDiagramList() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const diagramNavigation = { state: { diagramListPath: location.pathname + location.search } };
   const { user } = useAuth();
   const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const projectId = routeProjectId ?? searchParams.get('projectId');
@@ -70,14 +73,14 @@ function ProjectDiagramList() {
         key={projectId}
         projectId={projectId}
         canEdit={canEdit}
-        onSelectDiagram={(id) => { navigate(`/diagrams/${id}?projectId=${encodeURIComponent(projectId)}`); }}
+        onSelectDiagram={(id) => { navigate(`/diagrams/${id}?projectId=${encodeURIComponent(projectId)}`, diagramNavigation); }}
         onCreateNew={() => setShowCreateModal(true)}
       />
 
       {showCreateModal && <CreateDiagramModal
         projectId={projectId}
         onClose={() => setShowCreateModal(false)}
-        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(projectId)}`)}
+        onCreated={created => navigate(`/diagrams/${created.id}?projectId=${encodeURIComponent(projectId)}`, diagramNavigation)}
       />}
     </div>
   );
@@ -87,6 +90,7 @@ function DiagramViewWrapper() {
   const { diagramId = '' } = useParams<{ diagramId: string }>();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const canEdit = user?.role !== 'Lecturer';
 
@@ -96,10 +100,7 @@ function DiagramViewWrapper() {
       projectId={params.get('projectId') ?? undefined}
       diagramId={diagramId}
       canEdit={canEdit}
-      onBack={(projectId) => {
-        if (projectId) navigate(`/projects/${projectId}`);
-        else navigate('/projects');
-      }}
+      onBack={(projectId) => navigate(diagramListLink(projectId, location.state?.diagramListPath))}
     />
   );
 }
