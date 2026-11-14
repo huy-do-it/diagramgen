@@ -55,10 +55,9 @@ public class DiagramService : IDiagramService
         if (query.PageSize > 100) query.PageSize = 100;
 
         var userId = _currentUser.UserId;
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
 
         // BR-11: Nếu có ProjectId thì kiểm tra quyền ngay
-        if (query.ProjectId.HasValue && !isAdmin)
+        if (query.ProjectId.HasValue)
         {
             var hasAccess = await _memberAccessRepository.HasAccessAsync(query.ProjectId.Value, userId, cancellationToken);
             if (!hasAccess)
@@ -73,7 +72,7 @@ public class DiagramService : IDiagramService
         {
             queryable = queryable.Where(d => d.ProjectId == query.ProjectId.Value);
         }
-        else if (!isAdmin)
+        else
         {
             var accessibleProjectIds = _memberAccessRepository.GetQueryable()
                 .Where(m => m.UserId == userId)
@@ -387,6 +386,12 @@ public class DiagramService : IDiagramService
             throw new BusinessRuleException("BR-14", "Cannot trigger render while diagram is pending or rendering.", 409);
         }
 
+        // BR-14 (R16): Không render lại cùng version khi đã Rendered hoặc Failed (tránh trùng job worker kẹt Pending theo BR-26)
+        if (diagram.Status == DiagramStatus.Rendered || diagram.Status == DiagramStatus.Failed)
+        {
+            throw new BusinessRuleException("BR-14", "Phiên bản này đã được render hoặc đã thất bại. Để render lại, hãy chỉnh sửa để tạo phiên bản mới hoặc sử dụng chức năng Retry của Admin.", 409);
+        }
+
         // Cập nhật trạng thái sang Pending
         diagram.Status = DiagramStatus.Pending;
         diagram.UpdatedAt = DateTime.UtcNow;
@@ -551,9 +556,6 @@ public class DiagramService : IDiagramService
 
     private async Task EnsureProjectAccessAsync(Guid projectId, bool allowLecturer, CancellationToken cancellationToken)
     {
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
-        if (isAdmin) return;
-
         var access = await _memberAccessRepository.GetAccessAsync(projectId, _currentUser.UserId, cancellationToken);
         if (access == null)
         {

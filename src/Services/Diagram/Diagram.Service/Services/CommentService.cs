@@ -115,9 +115,6 @@ public class CommentService : ICommentService
 
     private async Task EnsureProjectAccessAsync(Guid projectId, CancellationToken cancellationToken)
     {
-        var isAdmin = string.Equals(_currentUser.Role, "Admin", StringComparison.OrdinalIgnoreCase);
-        if (isAdmin) return;
-
         var hasAccess = await _memberAccessRepository.HasAccessAsync(projectId, _currentUser.UserId, cancellationToken);
         if (!hasAccess)
         {

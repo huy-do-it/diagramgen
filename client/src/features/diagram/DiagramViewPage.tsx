@@ -1,3 +1,4 @@
+import { Modal } from '../../shared/Modal';
 import { useToast } from '../../shared/Toast';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -6,6 +7,7 @@ import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
 import { useRenderStatus } from '../../shared/useRenderStatus';
+import { ApiError } from '../../shared/api';
 import type { RenderSnapshot } from '../../shared/useRenderStatus';
 
 interface DiagramViewPageProps {
@@ -119,7 +121,14 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
       renderState.track();
       notify('Đã gửi yêu cầu render.');
     } catch (err: unknown) {
-      notify(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.', 'error');
+      if (err instanceof ApiError && err.status === 409) {
+        notify(
+          err.message || 'Phiên bản này đã được render hoặc đã thất bại. Để render lại, hãy chỉnh sửa để tạo phiên bản mới hoặc sử dụng chức năng Retry của Admin.',
+          'error'
+        );
+      } else {
+        notify(err instanceof Error ? err.message : 'Lỗi khi yêu cầu render.', 'error');
+      }
     }
   };
 
@@ -378,15 +387,19 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
 
       {/* Version History Modal */}
       {showVersionsModal && (
-        <div className="modal" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content panel" style={{ width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2>Lịch sử phiên bản: {diagram.title}</h2>
-              <button className="button button-ghost" aria-label="Đóng lịch sử phiên bản" onClick={() => setShowVersionsModal(false)}>✕</button>
-            </div>
+        <Modal
+          title={`Lịch sử phiên bản: ${diagram.title}`}
+          onClose={() => {
+            setShowVersionsModal(false);
+            setSelectedVersion(null);
+          }}
+        >
 
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table className="data-table" style={{ width: '100%' }}>
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              {versions.length === 0 ? (
+                <p style={{ color: 'var(--color-muted, #5f6c87)', padding: '16px 0' }}>Chưa có phiên bản nào.</p>
+              ) : (
+                <table className="data-table" style={{ width: '100%' }}>
                 <thead>
                   <tr>
                     <th>Phiên bản</th>
@@ -417,18 +430,18 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
                   ))}
                 </tbody>
               </table>
+              )}
 
               {selectedVersion && (
-                <div style={{ marginTop: '20px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
-                  <h4>Chi tiết snapshot v{selectedVersion.version}</h4>
-                  <pre style={{ background: '#f6f7fb', padding: '10px', borderRadius: '6px', maxHeight: '200px', overflow: 'auto', fontSize: '12px' }}>
+                <div style={{ marginTop: '20px', borderTop: '1px solid var(--color-border, #e0e5ef)', paddingTop: '12px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--color-text, #202735)' }}>Chi tiết snapshot v{selectedVersion.version}</h4>
+                  <pre style={{ background: '#f8f9fc', color: '#202735', border: '1px solid #e0e5ef', padding: '12px', borderRadius: '6px', maxHeight: '220px', overflow: 'auto', fontSize: '12px', fontFamily: 'monospace', lineHeight: '1.4' }}>
                     {selectedVersion.modelJson}
                   </pre>
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

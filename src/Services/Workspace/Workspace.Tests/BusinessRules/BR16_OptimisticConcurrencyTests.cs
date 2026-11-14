@@ -37,6 +37,7 @@ public class BR16_OptimisticConcurrencyTests
 
         _projectService = new ProjectService(
             _projectRepo,
+            new UserDirectoryRepository(_context),
             _outboxMock.Object,
             _currentUserMock.Object,
             new CreateProjectRequestValidator(),
