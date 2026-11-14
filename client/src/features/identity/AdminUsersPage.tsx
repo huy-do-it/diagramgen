@@ -1,3 +1,6 @@
+import { useToast } from '../../shared/Toast';
+import { LoadingState, LoadError, requestErrorMessage } from '../../shared/PageState';
+import { Modal } from '../../shared/Modal';
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../shared/api';
@@ -5,6 +8,8 @@ import { identityApi } from './identityApi';
 import type { UserItem, UserRole } from './types';
 
 export function AdminUsersPage() {
+  const notify = useToast();
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -29,6 +34,7 @@ export function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setMessage(null);
+    setLoadError(null);
     try {
       const isLockedParam = lockedFilter === 'all' ? undefined : lockedFilter === 'locked';
       const res = await identityApi.getUsers({
@@ -43,11 +49,7 @@ export function AdminUsersPage() {
       setTotalItems(res.totalItems);
       setTotalPages(res.totalPages);
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
-      } else {
-        setMessage({ text: 'Không thể tải danh sách người dùng.', type: 'error' });
-      }
+      setLoadError(requestErrorMessage(err, 'Không tải được danh sách người dùng.'));
     } finally {
       setLoading(false);
     }
@@ -74,10 +76,7 @@ export function AdminUsersPage() {
     setMessage(null);
     try {
       await identityApi.lockUser(targetUser.id, nextLockState);
-      setMessage({
-        text: `Đã ${nextLockState ? 'khóa' : 'mở khóa'} thành công tài khoản "${targetUser.username}".`,
-        type: 'success',
-      });
+      notify(`Đã ${nextLockState ? 'khóa' : 'mở khóa'} thành công tài khoản "${targetUser.username}".`);
       await fetchUsers();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -98,10 +97,7 @@ export function AdminUsersPage() {
     setMessage(null);
     try {
       await identityApi.updateRole(selectedUserForRole.id, newRole);
-      setMessage({
-        text: `Đã cập nhật vai trò của "${selectedUserForRole.username}" thành ${newRole}.`,
-        type: 'success',
-      });
+      notify(`Đã cập nhật vai trò của "${selectedUserForRole.username}" thành ${newRole}.`);
       setSelectedUserForRole(null);
       await fetchUsers();
     } catch (err: unknown) {
@@ -125,7 +121,7 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div>
+    <div className="feature-page">
       <div className="panel-header">
         <div>
           <h1>Quản lý người dùng hệ thống</h1>
@@ -137,10 +133,11 @@ export function AdminUsersPage() {
 
       {message && (
         <div
-          className={message.type === 'success' ? 'notice' : 'form-error'}
+          role="alert" className="notice danger"
           style={{ marginBottom: 20 }}
         >
           {message.text}
+          <div><button type="button" className="button button-secondary" onClick={fetchUsers}>Thử lại</button></div>
         </div>
       )}
 
@@ -201,7 +198,9 @@ export function AdminUsersPage() {
         </div>
 
         {loading ? (
-          <p className="muted" style={{ padding: 20, textAlign: 'center' }}>Đang tải danh sách người dùng...</p>
+          <LoadingState label="Đang tải danh sách người dùng…" />
+        ) : loadError ? (
+          <LoadError message={loadError} onRetry={fetchUsers} />
         ) : users.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">👥</div>
@@ -209,16 +208,16 @@ export function AdminUsersPage() {
             <p className="muted">Không có người dùng nào khớp với tiêu chí tìm kiếm hiện tại.</p>
           </div>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" role="region" aria-label="Danh sách người dùng" tabIndex={0}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Tên đăng nhập</th>
-                  <th>Họ và tên</th>
-                  <th>Vai trò</th>
-                  <th>Trạng thái</th>
-                  <th>Ngày tạo</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  <th scope="col">Tên đăng nhập</th>
+                  <th scope="col">Họ và tên</th>
+                  <th scope="col">Vai trò</th>
+                  <th scope="col">Trạng thái</th>
+                  <th scope="col">Ngày tạo</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,7 +226,7 @@ export function AdminUsersPage() {
                     <td>
                       <strong>{u.username}</strong>
                       {u.id === currentUser?.id && (
-                        <span className="status-badge" style={{ marginLeft: 8, background: '#eff6ff', color: '#1d4ed8' }}>
+                        <span className="status-badge" style={{ marginLeft: 8, background: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
                           (Bạn)
                         </span>
                       )}
@@ -251,10 +250,12 @@ export function AdminUsersPage() {
                         type="button"
                         className="button button-secondary button-small"
                         onClick={() => {
+                          setMessage(null);
                           setSelectedUserForRole(u);
                           setNewRole(u.role);
                         }}
                         disabled={actionLoadingId === u.id}
+                        aria-label={`Đổi vai trò cho ${u.username}`}
                         style={{ marginRight: 8 }}
                       >
                         Đổi vai trò
@@ -265,6 +266,7 @@ export function AdminUsersPage() {
                         className={`button button-small ${u.isLocked ? 'button-secondary' : 'button-danger'}`}
                         onClick={() => handleToggleLock(u)}
                         disabled={actionLoadingId === u.id || u.id === currentUser?.id}
+                        aria-label={`${u.isLocked ? 'Mở khóa' : 'Khóa'} tài khoản ${u.username}`}
                       >
                         {u.isLocked ? 'Mở khóa' : 'Khóa'}
                       </button>
@@ -287,7 +289,7 @@ export function AdminUsersPage() {
             >
               &larr; Trang trước
             </button>
-            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', fontSize: 13, color: '#687389' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', fontSize: 13, color: 'var(--color-muted)' }}>
               Trang {page} / {totalPages}
             </span>
             <button
@@ -304,28 +306,17 @@ export function AdminUsersPage() {
 
       {/* Modal Change Role */}
       {selectedUserForRole && (
-        <div className="modal-backdrop" onClick={() => setSelectedUserForRole(null)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Cập nhật vai trò (BR-04)</h2>
-              <button
-                type="button"
-                className="button button-secondary button-small"
-                onClick={() => setSelectedUserForRole(null)}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal title="Cập nhật vai trò" onClose={() => setSelectedUserForRole(null)} busy={!!actionLoadingId} className="feature-page">
             <p className="muted" style={{ marginBottom: 16 }}>
               Chọn vai trò mới cho người dùng <strong>{selectedUserForRole.username}</strong> ({selectedUserForRole.fullName}):
             </p>
 
-            <form onSubmit={handleSaveRole}>
+            {message && <div className="notice danger" role="alert">{message.text}</div>}
+            <form onSubmit={handleSaveRole} aria-busy={!!actionLoadingId}><fieldset disabled={!!actionLoadingId}>
               <div style={{ marginBottom: 20 }}>
                 <label className="field-label" htmlFor="select-new-role">Vai trò mới</label>
                 <select
-                  id="select-new-role"
+                  id="select-new-role" data-autofocus
                   className="select"
                   value={newRole}
                   onChange={e => setNewRole(e.target.value as UserRole)}
@@ -353,9 +344,8 @@ export function AdminUsersPage() {
                   {actionLoadingId === selectedUserForRole.id ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            </fieldset></form>
+        </Modal>
       )}
     </div>
   );

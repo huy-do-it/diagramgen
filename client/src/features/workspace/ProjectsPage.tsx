@@ -1,3 +1,6 @@
+import { useToast } from '../../shared/Toast';
+import { LoadingState, LoadError, requestErrorMessage } from '../../shared/PageState';
+import { Modal } from '../../shared/Modal';
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '../../shared/api';
@@ -5,6 +8,8 @@ import { workspaceApi } from './workspaceApi';
 import type { ProjectRole, ProjectSummary } from './types';
 
 export function ProjectsPage() {
+  const notify = useToast();
+  const [loadError, setLoadError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -16,7 +21,6 @@ export function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<ProjectRole | ''>('');
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Create Project Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -27,7 +31,7 @@ export function ProjectsPage() {
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
-    setMessage(null);
+    setLoadError(null);
     try {
       const res = await workspaceApi.getProjects({
         search: search.trim() || undefined,
@@ -40,11 +44,7 @@ export function ProjectsPage() {
       setTotalItems(res.totalItems);
       setTotalPages(res.totalPages);
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setMessage({ text: err.message, type: 'error' });
-      } else {
-        setMessage({ text: 'Không tải được danh sách dự án.', type: 'error' });
-      }
+      setLoadError(requestErrorMessage(err, 'Không tải được danh sách dự án.'));
     } finally {
       setLoading(false);
     }
@@ -71,6 +71,7 @@ export function ProjectsPage() {
       setShowCreateModal(false);
       setNewProjectName('');
       setNewProjectDescription('');
+      notify('Đã tạo dự án.');
       navigate(`/projects/${created.id}`);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -95,7 +96,7 @@ export function ProjectsPage() {
   };
 
   return (
-    <div>
+    <div className="feature-page">
       <div className="panel-header" style={{ marginBottom: 24 }}>
         <div>
           <h1>Không gian Dự án UMLForge</h1>
@@ -117,12 +118,6 @@ export function ProjectsPage() {
           </button>
         </div>
       </div>
-
-      {message && (
-        <div className={message.type === 'success' ? 'notice' : 'form-error'} style={{ marginBottom: 20 }}>
-          {message.text}
-        </div>
-      )}
 
       {/* Filters Bar */}
       <div className="filters-bar">
@@ -160,7 +155,9 @@ export function ProjectsPage() {
 
       {/* Projects List Grid */}
       {loading ? (
-        <p className="muted" style={{ padding: 40, textAlign: 'center' }}>Đang tải danh sách dự án...</p>
+        <LoadingState label="Đang tải danh sách dự án…" />
+      ) : loadError ? (
+        <LoadError message={loadError} onRetry={fetchProjects} />
       ) : projects.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📁</div>
@@ -193,9 +190,9 @@ export function ProjectsPage() {
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
-                background: '#fff',
-                border: '1px solid #e0e5ef',
-                borderRadius: 12,
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
                 padding: 24,
                 display: 'flex',
                 flexDirection: 'column',
@@ -206,13 +203,13 @@ export function ProjectsPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   {getRoleBadge(proj.currentUserRole)}
-                  <span style={{ fontSize: 12, color: '#8a94a6' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>
                     👥 {proj.memberCount}/5 thành viên
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: 18, margin: '0 0 8px 0', color: '#172c75' }}>{proj.name}</h3>
-                <p style={{ fontSize: 13, color: '#687389', margin: 0, lineHeight: 1.5, minHeight: 40 }}>
+                <h3 style={{ margin: '0 0 8px 0', color: 'var(--color-text)' }}>{proj.name}</h3>
+                <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: 0, lineHeight: 1.5, minHeight: 40 }}>
                   {proj.description || 'Chưa có mô tả cho dự án này.'}
                 </p>
               </div>
@@ -221,16 +218,16 @@ export function ProjectsPage() {
                 style={{
                   marginTop: 20,
                   paddingTop: 12,
-                  borderTop: '1px solid #f0f3f8',
+                  borderTop: '1px solid var(--color-border-soft)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   fontSize: 12,
-                  color: '#9199aa',
+                  color: 'var(--color-muted)',
                 }}
               >
                 <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
-                <span style={{ color: '#344bd0', fontWeight: 600 }}>Chi tiết &rarr;</span>
+                <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Chi tiết &rarr;</span>
               </div>
             </Link>
           ))}
@@ -248,7 +245,7 @@ export function ProjectsPage() {
           >
             &larr; Trang trước
           </button>
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', fontSize: 13, color: '#687389' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 12px', fontSize: 13, color: 'var(--color-muted)' }}>
             Trang {page} / {totalPages}
           </span>
           <button
@@ -264,32 +261,23 @@ export function ProjectsPage() {
 
       {/* Create Project Modal */}
       {showCreateModal && (
-        <div className="modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Tạo dự án Capstone mới</h2>
-              <button
-                type="button"
-                className="button button-secondary button-small"
-                onClick={() => setShowCreateModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal title="Tạo dự án Capstone mới" onClose={() => setShowCreateModal(false)} busy={creating} className="feature-page">
             <p className="muted" style={{ marginBottom: 16 }}>
               Theo quy tắc nghiệp vụ <strong>BR-06</strong>, người khởi tạo dự án sẽ tự động được cấp quyền <strong>Trưởng nhóm (Leader)</strong>.
             </p>
 
-            {createError && <div className="form-error" style={{ marginBottom: 16 }}>{createError}</div>}
+            {createError && <div id="create-project-error" role="alert" className="form-error" style={{ marginBottom: 16 }}>{createError}</div>}
 
-            <form onSubmit={handleCreateProject}>
+            <form onSubmit={handleCreateProject} aria-busy={creating}><fieldset disabled={creating}>
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label" htmlFor="new-proj-name">
-                  Tên dự án <span style={{ color: '#a12d3b' }}>*</span>
+                  Tên dự án <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <input
                   id="new-proj-name"
+                  data-autofocus
+                  aria-invalid={!!createError}
+                  aria-describedby={createError ? 'create-project-error' : undefined}
                   type="text"
                   placeholder="Ví dụ: Đồ án Hệ thống Quản lý Bệnh viện..."
                   value={newProjectName}
@@ -331,9 +319,8 @@ export function ProjectsPage() {
                   {creating ? 'Đang tạo...' : 'Tạo dự án'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
+            </fieldset></form>
+        </Modal>
       )}
     </div>
   );

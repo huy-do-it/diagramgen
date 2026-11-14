@@ -18,19 +18,25 @@ public class AdminJobsController : ControllerBase
     }
 
     /// <summary>
-    /// Chạy ngay job expire-invitations để quét và đánh dấu lời mời hết hạn (chỉ Admin). Trả về 200 OK.
+    /// Chạy ngay job expire-invitations (chỉ Admin), trả JobRunResult với 202 như shared job endpoint.
     /// </summary>
     [HttpPost("expire-invitations/run")]
-    [ProducesResponseType(typeof(JobRunResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(JobRunResult), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RunExpireInvitations(CancellationToken ct)
     {
         var result = await _jobTrigger.RunNowAsync("expire-invitations", ct);
         if (result == null)
-            return NotFound(new { message = "Không tìm thấy job 'expire-invitations'." });
+        {
+            var response = Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: "Không có job 'expire-invitations'.");
+            ((ProblemDetails)response.Value!).Extensions["code"] = "JOB_NOT_FOUND";
+            return response;
+        }
 
-        return Ok(result);
+        return Accepted(value: result);
     }
 }

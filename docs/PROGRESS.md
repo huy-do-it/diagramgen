@@ -3,8 +3,8 @@
 > Cập nhật **cuối mỗi buổi làm** (hoặc khi merge PR). Ghi ngắn: xong gì, lỗi gì, làm gì tiếp.
 > Khi nhờ AI làm tiếp, đưa file này cho AI đọc trước để nó biết dự án đang ở đâu.
 
-**Cập nhật lần cuối:** 12/11/2026 — đối chiếu và cập nhật bàn giao M-01–M-07 của Minh.
-**Giai đoạn hiện tại:** M-01–M-07 đã triển khai, kiểm thử trong phạm vi Minh và merge vào `develop`; M-07 qua PR #10, merge commit `761f0ed`. Snapshot kiểm tra ghép nhóm: `81badf9` (đã gồm PR #11 Diagram và PR #12 Workspace). Đang chuẩn bị tích hợp I-01–I-06; chưa nghiệm thu toàn bộ hệ thống. Xem TASKS.md §7 và các giới hạn bên dưới.
+**Cập nhật lần cuối:** 14/11/2026 — Huy: checkpoint R12/R18, Identity startup và nghiệm thu WF-01 (chi tiết nhật ký bên dưới).
+**Giai đoạn hiện tại:** Checkpoint Huy ngày 14/11 trên `feature/huy-client`, parent `8deb4ce` sau đồng bộ `origin/develop` (`e08041f`): WF-01 qua browser thật trên stack riêng 11 container; Identity/Workspace UI-11 GET + POST 202 PASS. Identity startup có sửa chưa commit và evidence riêng. Các ghi chép ngày 12/11 bên dưới là lịch sử tại revision tương ứng; chưa nghiệm thu toàn bộ WF-02/WF-03, CI, p95 hoặc video ở checkpoint này.
 
 ---
 
@@ -12,15 +12,15 @@
 
 | Người | Ngày 1 | Ngày 2 | Ngày 3 | Ngày 4 sáng | Xong |
 |---|---|---|---|---|---|
-| Huy | ✅ H-01 · ✅ H-02 | ✅ H-03 · ✅ H-04 | ✅ H-05 · ✅ H-06 | ✅ H-07 | 7/7 (Hoàn thành 100%) |
+| Huy | ✅ H-01 · ✅ H-02 | ✅ H-03 · ✅ H-04 | ✅ H-05 · ✅ H-06 | ✅ H-07 | 7/7 deliverables; nghiệm thu theo checkpoint 14/11, không suy ra toàn hệ thống 100% |
 | Thiện | ✅ T-01 · ✅ T-02 | ✅ T-03 · ✅ T-04 | ✅ T-05 · ✅ T-06 | ✅ T-07 | 7/7 (Hoàn thành 100%) |
 | Minh | ✅ M-01 · ✅ M-02 | ✅ M-03 · ✅ M-04 | ✅ M-05 · ✅ M-06 | ✅ M-07 | 7/7 (đã bàn giao; chờ nghiệm thu tích hợp chung) |
 | Bảo | ✅ B-01 · ✅ B-02 | ✅ B-03 · ✅ B-04 | ✅ B-05 · ✅ B-06 | ✅ B-07 | 7/7 — đóng theo nghiệm thu leader, Minh xác nhận 14/11/2026 |
-| Cả nhóm (ngày 4 chiều) | | | | ⬜ I-01 → I-06 | 0/6 |
+| Cả nhóm (ngày 4 chiều) | | | | ✅ I-03 (WF-01); I-01/I-02/I-04–I-06 theo evidence riêng | 1/6 được xác nhận tại checkpoint Huy 14/11 |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ xong · ⛔ bị chặn
 
-Đợt cập nhật này xác minh phần Minh bằng source, PR đã merge và evidence. Các dòng của đồng đội được giữ nguyên; bảng không thay thế nghiệm thu liên service. Dấu ✅ của Minh xác nhận deliverables từng task đã bàn giao, không xác nhận CI, review độc lập hoặc toàn bộ WF-01–03 đã đạt.
+Checkpoint 14/11 bổ sung nghiệm thu phần Huy và I-03, giữ lịch sử bàn giao của đồng đội. Dấu ✅ deliverables không thay thế nghiệm thu liên service; không suy ra CI, review độc lập hoặc toàn bộ WF-01–03 đã đạt.
 
 ---
 
@@ -145,7 +145,10 @@ Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “ch
 |---|---|---|---|---|---|
 | INT-M01 | Diagram phát RenderRequested.DiagramType dạng chuỗi, shared contract của Render yêu cầu int 1..5 | Chặn WF-02 | Diagram → Render | Đã sửa | Thiện đã sửa phát int 1..5 khớp shared contract; 65/65 unit tests PASS. |
 | INT-M02 | Cùng diagram/version qua nhiều lần retry chưa có attempt sequence trong event; recipient read model đa stream có độ trễ | Cần kiểm khi ghép | Render / Diagram / Notification | Mở | Không tự đổi shared contract; kiểm kết quả attempt cũ và membership thay đổi đồng thời. |
-| INT-M03 | Chưa đủ đường chạy Engine/Gateway/Compose và API job chung cho UI-11 | Chặn nghiệm thu chung | Toàn hệ thống | Chờ phần publish/tích hợp của nhóm | Root Compose config từng lỗi tại `81badf9`; với phần hạ tầng PR #14 đã PASS config, Engine thật đã có. Gateway và Identity GET job list/response chuẩn vẫn cần ghép. Không suy ra 11 container/WF acceptance từ config PASS. |
+| INT-M03 | Đường ghép Gateway/Identity jobs và startup stack cho WF-01 | Đã khép phạm vi WF-01/UI-11 Identity + Workspace | Toàn hệ thống | PASS checkpoint Huy 14/11 | Parent `8deb4ce` + working-tree Identity startup: 8 image build, stack riêng 11 container, 16 nhóm browser và 14 ảnh; UI-11 GET registry và POST 202 cho Identity/Workspace. Gateway dùng DNS upstream thật. Không dùng kết quả này để đóng CI, Compose I-02, WF-02/03, recovery, p95 hay video; runner dựng stack từ cấu hình module, không chạy root Compose. Evidence `.antigravity/wf01-browser-20261114/REPORT.md` ngoài repo. |
+| OBS-BELL-STALE | Dropdown thông báo mở trước khi event đến vẫn rỗng trong khi badge sau đó lên 1 | Quan sát UX | Notification / Minh | Chờ đánh giá riêng | `attempt-1/browser-failure.png` và log: GET list trước InvitationSent; unread-count poll sau đó có 1. `NotificationBell.tsx:34,44,48`: badge poll 30s, list chỉ reload khi open/revision đổi. Làm mới hoặc đóng/mở lại thấy notification; không mất event. Không sửa chéo trong WF-01. |
+| OBS-LOGIN-429 | Đăng nhập quá nhanh hiện lỗi chung, chưa hướng dẫn chờ rate limit | Quan sát UX | Client shared / Bảo, phối hợp Huy | Chờ đánh giá riêng | `attempt-2/browser-failure.png`, request login Lecturer trả 429; Gateway giới hạn đúng 10/min/IP (`Program.cs:33`). `shared/api.ts:43,164` chưa có message 429. Runner chờ cửa sổ giới hạn, không tắt limiter. |
+| OBS-REG-ROLE | Register có lựa chọn Lecturer nhưng backend tự đăng ký luôn Student | Lệch UI/API cần chốt chính sách | Identity / Huy | Mở, ngoài phạm vi lượt này | `RegisterPage.tsx:49,136`, `AuthService.cs:79`. WF-01 chỉ đăng ký Student; không dùng test này xác nhận đăng ký Lecturer. |
 
 **Rủi ro kỹ thuật đã biết trước (từ v1 và thiết kế):**
 
@@ -199,13 +202,25 @@ Các dòng dưới ghi đúng trạng thái tại mốc M-03. Những câu “ch
 ## 7. Việc tiếp theo
 
 1. Minh đã bàn giao M-01–M-07; các thành viên xác nhận/publish phần còn thiếu và đối chiếu **TASKS.md §1** trước ghép.
-2. Xử lý contract Diagram → Render, gRPC/recovery Diagram và API job chung; không dùng unit PASS để suy ra liên service đã chạy đúng.
-3. Thực hiện I-01–I-06 theo TASKS.md §7: CI, Compose/11 container, WF-01–03 rồi job admin/video. Chỉ tick sau khi có evidence tương ứng.
+2. Nghiệm thu riêng gRPC/render/recovery và event ordering (INT-M02); Identity/Workspace job trên UI-11 đã có evidence mới ngày 14/11, không tiếp tục ghi thiếu registry Identity/Gateway.
+3. I-03/WF-01 đã PASS tại checkpoint Huy 14/11. Các mục còn lại I-01/I-02/I-04/I-05/I-06 cần evidence theo TASKS.md §7; stack fixture 11 container không thay root Compose/CI/video.
 4. Mỗi người cập nhật phần tiến độ của mình. Không tự sửa trạng thái đồng đội hoặc Google Sheet từ kết quả kiểm tra local.
 
 ---
 
 ## 8. Nhật ký
+
+### 14/11/2026 — Huy: R12/R18, Identity startup, I-03/WF-01
+
+- Đã fetch/pull `origin/develop` trước implementation, kết quả Already up to date. Branch `feature/huy-client`; parent kiểm thử `8deb4ce0a80b0bafa22f695416321b4f3b9623f6`, develop `e08041f`. Startup Identity và tài liệu/test WF-01 hiện chưa commit.
+- R12.1 desktop 240px/56px (`f72be1b`), R12.2 tablet icon/mobile drawer (`b9fef98`), R12.3 tokens/states/accessibility trong màn hình Huy (`e03aa8f`), R12.4 bỏ ETag banner nhưng giữ concurrency (`68b3026`). Evidence local riêng: `.antigravity/r12-1-20261114/` đến `r12-4-20261114/`; không nhận sửa toàn bộ UI nhóm.
+- R18 (`8deb4ce`): Workspace POST job trả shared 202; 6 HTTP regression cases, tổng Workspace 39/39 tests PASS. API/JWT và UI-11 thật PASS; `.antigravity/r18-20261114/REPORT.md`.
+- Identity startup: relational migration trước listener trong mọi môi trường; chỉ seed demo Development; lỗi log Critical và throw. 12 nhóm SQL/startup thật và 46/46 Identity tests Linux PASS. Production DB mới tạo schema, restart giữ dữ liệu; lỗi quyền migration ở Production/Development đều thoát nonzero, không mở listener. Repo hiện một migration nên chỉ xác nhận apply hiện có + restart, không chứng nhận upgrade tương lai. `.antigravity/identity-startup-20261114/REPORT.md`.
+- I-03/WF-01: build 8 image source hiện tại + stack riêng 11 container; 19 nhóm runner, 16 nhóm browser, 14 ảnh, 0 uncaught exception. UI thật tạo project → tìm/mời → nhận thông báo → chấp nhận → membership; cả 4 thành viên + 1 pending lẫn 5 thành viên thực đều chặn người thứ 6 bằng 409/BR-07. Ở 5/5 UI khóa nút; probe API 409 được ghi riêng, không giả nhận đã bấm nút disabled.
+- Kiểm thêm: tên/họ tên member trên build mới đầy đủ; 5 sinh viên + 1 Lecturer vẫn đếm 5/5; Member/Lecturer không có leader controls; outsider API 403 và UI lỗi quyền; membership Diagram từ event thật cho phép Member GET danh sách. UI-11 Identity/Workspace tải registry và bấm chạy nhận 202/success qua nginx/Gateway DNS thật.
+- Không mock HTTP/token/membership, không SQL inject business data; UseFake=false. Không thực hiện render/validation/review/recovery trong WF-01. Đã cleanup đúng container/network fixture, không xóa volume hoặc thay stack chính. SHA-256 application source không đổi trong quá trình build/test.
+- Evidence: `.antigravity/wf01-browser-20261114/REPORT.md`, `result.json`, `browser-result.json`, build/container logs và ảnh (ngoài repo `diagramgen`, cần gửi kèm khi bàn giao). Hai lượt trước và bằng chứng OBS-BELL-STALE/OBS-LOGIN-429 giữ tại `attempt-1/`, `attempt-2/`; final PASS sau khi test tuân theo eventual delivery/rate limit. OBS-REG-ROLE vẫn mở.
+- Chạy lại: [SELF_TEST_WF01.md](SELF_TEST_WF01.md), `tests/IntegrationTests/verify_workspace_flow.py` và `workspace_flow.browser.mjs`. Chưa commit/push hai phần mới; bàn giao thành hai nhóm commit riêng.
 
 ### 14/11/2026 — Minh: sửa điều hướng khi kiểm thử app
 - Thông báo InvitationSent mới mở `/invitations/mine`; Bell và UI-09 xử lý cả link project của thông báo cũ, không mở quyền project trước khi chấp nhận.
