@@ -78,6 +78,11 @@ form input:focus { border-color: #6478e7; }
 .workspace-footer { display: flex; justify-content: space-between; gap: 18px; margin: 0 42px; padding: 22px 0; border-top: 1px solid #e5e9f1; font-size: 11px; color: #949daf; }
 .skip-link { position: fixed; top: -70px; left: 12px; z-index: 10; padding: 12px; background: white; border: 2px solid #344bd0; border-radius: 5px; }
 .skip-link:focus { top: 12px; }
+/* DESIGN §5: expanded desktop shell; tablet/mobile behavior is handled separately. */
+@media (min-width: 1200px) {
+  .sidebar { width: 240px; }
+  .topbar { height: 56px; min-height: 56px; padding-block: 5px; flex-shrink: 0; }
+}
 @media (max-width: 900px) {
   .login-story { padding: 34px 30px 26px; }
   .story-footer { display: block; line-height: 2; }
