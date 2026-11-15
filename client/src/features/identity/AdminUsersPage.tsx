@@ -7,6 +7,12 @@ import { ApiError } from '../../shared/api';
 import { identityApi } from './identityApi';
 import type { UserItem, UserRole } from './types';
 
+const roleLabels: Record<UserRole, string> = {
+  Student: 'Sinh viên',
+  Lecturer: 'Giảng viên',
+  Admin: 'Quản trị viên',
+};
+
 export function AdminUsersPage() {
   const notify = useToast();
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -97,7 +103,7 @@ export function AdminUsersPage() {
     setMessage(null);
     try {
       await identityApi.updateRole(selectedUserForRole.id, newRole);
-      notify(`Đã cập nhật vai trò của "${selectedUserForRole.username}" thành ${newRole}.`);
+      notify(`Đã cập nhật vai trò của "${selectedUserForRole.username}" thành ${roleLabels[newRole]}.`);
       setSelectedUserForRole(null);
       await fetchUsers();
     } catch (err: unknown) {
@@ -212,8 +218,8 @@ export function AdminUsersPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th scope="col">Tên đăng nhập</th>
                   <th scope="col">Họ và tên</th>
+                  <th scope="col">Tên đăng nhập</th>
                   <th scope="col">Vai trò</th>
                   <th scope="col">Trạng thái</th>
                   <th scope="col">Ngày tạo</th>
@@ -224,17 +230,17 @@ export function AdminUsersPage() {
                 {users.map(u => (
                   <tr key={u.id}>
                     <td>
-                      <strong>{u.username}</strong>
+                      <strong>{u.fullName?.trim() || u.username}</strong>
                       {u.id === currentUser?.id && (
                         <span className="status-badge" style={{ marginLeft: 8, background: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
                           (Bạn)
                         </span>
                       )}
                     </td>
-                    <td>{u.fullName}</td>
+                    <td>{u.username}</td>
                     <td>
                       <span className={`status-badge ${u.role === 'Admin' ? 'status-failed' : u.role === 'Lecturer' ? 'status-pending' : ''}`}>
-                        {u.role}
+                        {roleLabels[u.role]}
                       </span>
                     </td>
                     <td>
