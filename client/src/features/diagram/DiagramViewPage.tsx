@@ -7,7 +7,7 @@ import { DiagramTypeLabels } from './types';
 import type { DiagramDetail, DiagramVersionSummary, DiagramVersionDetail, Comment } from './types';
 import { diagramApi } from './diagramApi';
 import { useRenderStatus } from '../../shared/useRenderStatus';
-import { ApiError } from '../../shared/api';
+import { ApiError, apiRequest, type PagedResult } from '../../shared/api';
 import type { RenderSnapshot } from '../../shared/useRenderStatus';
 
 interface DiagramViewPageProps {
@@ -37,6 +37,56 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
   const [versions, setVersions] = useState<DiagramVersionSummary[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<DiagramVersionDetail | null>(null);
   const [showVersionsModal, setShowVersionsModal] = useState(false);
+
+  const [versionAuthors, setVersionAuthors] = useState<Record<string, string>>({});
+  const [loadingVersionAuthors, setLoadingVersionAuthors] = useState(false);
+
+  useEffect(() => {
+    if (!showVersionsModal) return;
+    let cancelled = false;
+    const needed = new Set(versions.map(v => v.createdBy.toLowerCase()));
+    if (user?.id) needed.delete(user.id.toLowerCase());
+    if (needed.size === 0) return;
+
+    setVersionAuthors({});
+    setLoadingVersionAuthors(true);
+    async function loadNames() {
+      const names: Record<string, string> = {};
+      try {
+        // Authors can be beyond the first page of the authenticated directory.
+        for (let page = 1; !cancelled && needed.size > 0; page++) {
+          const result = await apiRequest<PagedResult<{ userId: string; fullName: string; username: string }>>(
+            `/directory/users?page=${page}&pageSize=100`
+          );
+          for (const entry of result.items) {
+            const id = entry.userId.toLowerCase();
+            if (needed.has(id)) {
+              names[id] = entry.fullName?.trim() || entry.username;
+              needed.delete(id);
+            }
+          }
+          if (page >= result.totalPages || result.items.length === 0) break;
+        }
+      } catch {
+        // Directory failures must not prevent viewing version snapshots.
+      } finally {
+        if (!cancelled) {
+          setVersionAuthors(names);
+          setLoadingVersionAuthors(false);
+        }
+      }
+    }
+    void loadNames();
+    return () => { cancelled = true; };
+  }, [showVersionsModal, versions, user?.id]);
+
+  function versionAuthorName(createdBy: string): string {
+    if (createdBy.toLowerCase() === user?.id?.toLowerCase()) {
+      return `${user.fullName?.trim() || user.username || 'Tôi'} (Bạn)`;
+    }
+    return versionAuthors[createdBy.toLowerCase()]
+      || (loadingVersionAuthors ? 'Đang tải tên…' : 'Không tìm thấy tên người dùng');
+  }
 
   // Comments
   const [comments, setComments] = useState<Comment[]>([]);
@@ -418,7 +468,7 @@ export const DiagramViewPage: React.FC<DiagramViewPageProps> = ({ diagramId, pro
                     <tr key={v.id}>
                       <td>v{v.version}</td>
                       <td>{new Date(v.createdAt).toLocaleString('vi-VN')}</td>
-                      <td>{v.createdBy.toLowerCase() === user?.id?.toLowerCase() ? `${user.username || user.fullName || 'Tôi'} (Bạn)` : `${v.createdBy.substring(0, 8)}…`}</td>
+                      <td title={v.createdBy}>{versionAuthorName(v.createdBy)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="button button-secondary button-small" onClick={() => handleViewVersion(v.version)}>
